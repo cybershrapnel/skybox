@@ -95,7 +95,7 @@ System.prototype.populatePlanets = function () {
       var ellipsePath = new THREE.CurvePath();
       ellipsePath.add(ellipse);
       var ellipseGeometry = ellipsePath.createPointsGeometry(100);
-      //ellipseGeometry.computeTangents();
+      ellipseGeometry.computeTangents();
       var orbit = new THREE.Line(ellipseGeometry, orbitMaterial);
 
       orbit.rotation.set(0, 0, 0);
