@@ -241,15 +241,27 @@ function createVirtualStars() {
     // Inner planet (smaller sphere inside the virtual star)
     const planetGeometry = new THREE.SphereGeometry(0.05, 8, 8); // Smaller size for the planet
 
-    // Random color function for green-to-blue and red-to-magenta ranges
+    // Random color function for dynamic and solid colors
     const getRandomColor = () => {
-      const range = Math.random();
-      if (range < 0.5) {
-        // Green to Blue range
-        return new THREE.Color(Math.random() * 0.5, Math.random() * 0.5 + 0.5, 1); // RGB values for green-blue
+      const colorType = Math.random();
+      if (colorType < 0.3) {
+        // Dynamic colors
+        if (Math.random() < 0.5) {
+          // Green to Blue range
+          return new THREE.Color(Math.random() * 0.5, Math.random() * 0.5 + 0.5, 1);
+        } else {
+          // Red to Magenta range
+          return new THREE.Color(1, Math.random() * 0.5, Math.random() * 0.5 + 0.5);
+        }
       } else {
-        // Red to Magenta range
-        return new THREE.Color(1, Math.random() * 0.5, Math.random() * 0.5 + 0.5); // RGB values for red-magenta
+        // Solid colors: red, blue, magenta, green
+        const solidColors = [
+          new THREE.Color(1, 0, 0),      // Red
+          new THREE.Color(0, 1, 0),      // Green
+          new THREE.Color(0, 0, 1),      // Blue
+          new THREE.Color(1, 0, 1)       // Magenta
+        ];
+        return solidColors[Math.floor(Math.random() * solidColors.length)];
       }
     };
 
