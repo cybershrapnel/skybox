@@ -232,13 +232,15 @@ function createVirtualStars() {
     const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const virtualStar = new THREE.Mesh(starGeometry, starMaterial);
 
-    // Set position and assign unique properties
+    // Set position and assign unique properties with defaults
     virtualStar.position.set(randomX, randomY, randomZ);
     virtualStar.objectData = {
       primaryId: `virtual_star_${i}`, // Unique ID for the virtual star
       properName: `Virtual Star ${i + 1}`, // Name for the star
       type: "VIRTUAL_STAR",
-      solDistance: { value: { quantity: Math.random() * renderRadius } } // Random distance within render radius
+      radius: { value: { quantity: 0.01 } }, // Default radius value
+      solDistance: { value: { quantity: Math.random() * renderRadius } }, // Random distance within render radius
+      nearbyObjectIDs: [] // Empty array to avoid undefined errors
     };
 
     // Add star to the scene, store it in stars array, and mark it as selectable
