@@ -228,25 +228,29 @@ function createVirtualStars() {
     const randomY = Math.random() * maxDistance - maxDistance / 2;
     const randomZ = Math.random() * maxDistance - maxDistance / 2;
 
-    // Outer star for easier interaction
-    const clickableGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
+    // Outer clickable star
+    const outerStarGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
     const outerStarMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       opacity: 0.8, // Slightly transparent if desired
       transparent: true
     });
-    const outerStar = new THREE.Mesh(clickableGeometry, outerStarMaterial);
+    const outerStar = new THREE.Mesh(outerStarGeometry, outerStarMaterial);
 
     // Inner, smaller visible star
-    const innerStarGeometry = new THREE.SphereGeometry(0.05, 8, 8); // Smaller size for the visual star
+    const innerStarGeometry = new THREE.SphereGeometry(0.01, 8, 8); // Much smaller size for the visual star
     const innerStarMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const innerStar = new THREE.Mesh(innerStarGeometry, innerStarMaterial);
 
-    // Group both inner and outer stars
+    // Position both inner and outer stars at the same location
+    outerStar.position.set(0, 0, 0);
+    innerStar.position.set(0, 0, 0);
+
+    // Group both inner and outer stars together
     const virtualStarGroup = new THREE.Group();
     virtualStarGroup.add(outerStar); // Add the outer clickable star
     virtualStarGroup.add(innerStar); // Add the inner visible star
-    virtualStarGroup.position.set(randomX, randomY, randomZ); // Set the group's position
+    virtualStarGroup.position.set(randomX, randomY, randomZ); // Position the group in space
 
     // Assign default properties to the group
     virtualStarGroup.objectData = {
@@ -265,6 +269,7 @@ function createVirtualStars() {
     virtualStars.push(virtualStarGroup); // Track in virtualStars array for later removal
   }
 }
+
 
 
 
