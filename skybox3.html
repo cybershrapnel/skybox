@@ -269,7 +269,7 @@ function createVirtualStars() {
     virtualStar.add(innerPlanet); // Add the planet as a child of the virtual star
 
     // Innermost moon object, positioned at the exact center
-    const moonGeometry = new THREE.SphereGeometry(0.015, 8, 8); // Smaller size for the moon
+    const moonGeometry = new THREE.SphereGeometry(0.005, 8, 8); // Smaller size for the moon
     const moonMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 }); // Placeholder color
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
 
