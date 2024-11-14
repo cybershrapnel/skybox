@@ -220,8 +220,8 @@
 let virtualStars = [];
 
 function createVirtualStars() {
-  const numStars = 10*renderRadius; // Adjust for the desired number of virtual stars
-  const maxDistance = renderRadius * 2; // Set max distance for virtual stars based on render radius
+  const numStars = (100*renderRadius)-900; // Adjust for the desired number of virtual stars
+  const maxDistance = renderRadius * 12; // Set max distance for virtual stars based on render radius
 
   for (let i = 0; i < numStars; i++) {
     const randomX = Math.random() * maxDistance - maxDistance / 2;
