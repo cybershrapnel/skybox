@@ -238,39 +238,32 @@ function createVirtualStars() {
     const virtualStar = new THREE.Mesh(clickableGeometry, starMaterial);
     virtualStar.position.set(randomX, randomY, randomZ);
 
-    // Inner planet (smaller sphere inside the virtual star)
-    const planetGeometry = new THREE.SphereGeometry(0.05, 8, 8); // Smaller size for the planet
-
-    // Random color function for dynamic and solid colors
-    const getRandomColor = () => {
-      const colorType = Math.random();
-      if (colorType < 0.3) {
-        // Dynamic colors
-        if (Math.random() < 0.5) {
-          // Green to Blue range
-          return new THREE.Color(Math.random() * 0.5, Math.random() * 0.5 + 0.5, 1);
-        } else {
-          // Red to Magenta range
-          return new THREE.Color(1, Math.random() * 0.5, Math.random() * 0.5 + 0.5);
-        }
-      } else {
-        // Solid colors: red, blue, magenta, green
-        const solidColors = [
-          new THREE.Color(1, 0, 0),      // Red
-          new THREE.Color(0, 1, 0),      // Green
-          new THREE.Color(0, 0, 1),      // Blue
-          new THREE.Color(1, 0, 1)       // Magenta
-        ];
-        return solidColors[Math.floor(Math.random() * solidColors.length)];
-      }
-    };
-
-    const planetMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() });
+    // Inner Earth-like planet
+    const planetGeometry = new THREE.SphereGeometry(0.05, 16, 16); // Size for the Earth-like planet
+    const planetMaterial = new THREE.MeshBasicMaterial({ map: earthTexture });
     const innerPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
 
-    // Position the inner planet at the center of the virtual star
+    // Moon (smaller sphere inside the Earth-like planet)
+    const moonGeometry = new THREE.SphereGeometry(0.015, 16, 16); // Smaller size for the moon
+    const moonMaterial = new THREE.MeshBasicMaterial({ map: earthTexture }); // Reusing Earth texture as a placeholder
+    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+
+    // Position the inner planet and moon within the virtual star
     innerPlanet.position.set(0, 0, 0);
-    virtualStar.add(innerPlanet); // Add the planet as a child of the virtual star
+    moon.position.set(0.08, 0, 0); // Offset the moon slightly from the inner planet to be visible
+
+    // Set object data to identify the moon
+    moon.objectData = {
+      primaryId: `moon_${i}`,
+      properName: `Moon of Virtual Star ${i + 1}`,
+      type: "MOON"
+    };
+
+    // Add the moon as a child of the inner planet
+    innerPlanet.add(moon);
+
+    // Add the inner planet as a child of the virtual star
+    virtualStar.add(innerPlanet);
 
     // Assign default properties to the virtual star
     virtualStar.objectData = {
@@ -289,8 +282,6 @@ function createVirtualStars() {
     virtualStars.push(virtualStar); // Track in virtualStars array for later removal
   }
 }
-
-
 
 
 
