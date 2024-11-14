@@ -115,7 +115,9 @@
         <tr class="child-row">
           <td>
     <input type="checkbox" id="virtual_stars_checkbox" name="virtual_stars"> Enable Virtual Stars
-
+<div>
+  <button id="autoExploreButton">Toggle Auto Explore</button>
+</div>
           </td>
 
 
@@ -1245,6 +1247,57 @@ function getValue(data, element) {
     );
   });
 
+
+
+let autoExploreMode = false; // Track if auto explore mode is on
+let autoExploreInterval; // Variable to hold the interval for auto explore
+
+// Function to toggle Auto Explore mode
+function toggleAutoExplore() {
+  autoExploreMode = !autoExploreMode; // Toggle the mode
+
+  if (autoExploreMode) {
+    document.getElementById("autoExploreButton").innerText = "Stop Auto Explore";
+    startAutoExplore();
+  } else {
+    document.getElementById("autoExploreButton").innerText = "Start Auto Explore";
+    stopAutoExplore();
+  }
+}
+
+// Function to start Auto Explore mode
+function startAutoExplore() {
+  // Set an interval to randomly select and travel to a star every 1-3 seconds
+  autoExploreInterval = setInterval(() => {
+    const randomStar = getRandomStar();
+    if (randomStar) {
+      select(randomStar); // Simulate selecting the star for travel
+    }
+  }, getRandomInterval(1000, 3000)); // Random interval between 1 and 3 seconds
+}
+
+// Function to stop Auto Explore mode
+function stopAutoExplore() {
+  clearInterval(autoExploreInterval); // Stop the interval
+}
+
+// Helper function to get a random star from the stars array
+function getRandomStar() {
+  const availableStars = stars.filter(star => star.objectData && star.objectData.type === "STAR");
+  return availableStars[Math.floor(Math.random() * availableStars.length)];
+}
+
+// Helper function to get a random interval between min and max milliseconds
+function getRandomInterval(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Add event listener to the Auto Explore button
+document.getElementById("autoExploreButton").addEventListener("click", toggleAutoExplore);
+
+
+
+  
 </script>
 
 
