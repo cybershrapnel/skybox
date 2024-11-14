@@ -228,32 +228,27 @@ function createVirtualStars() {
     const randomY = Math.random() * maxDistance - maxDistance / 2;
     const randomZ = Math.random() * maxDistance - maxDistance / 2;
 
-    // Outer clickable star
-    const outerStarGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
-    const outerStarMaterial = new THREE.MeshBasicMaterial({
+    // Outer clickable virtual star
+    const clickableGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
+    const starMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       opacity: 0.8, // Slightly transparent if desired
       transparent: true
     });
-    const outerStar = new THREE.Mesh(outerStarGeometry, outerStarMaterial);
+    const virtualStar = new THREE.Mesh(clickableGeometry, starMaterial);
+    virtualStar.position.set(randomX, randomY, randomZ);
 
-    // Inner, smaller visible star
-    const innerStarGeometry = new THREE.SphereGeometry(0.01, 8, 8); // Much smaller size for the visual star
-    const innerStarMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const innerStar = new THREE.Mesh(innerStarGeometry, innerStarMaterial);
+    // Inner planet (smaller sphere inside the virtual star)
+    const planetGeometry = new THREE.SphereGeometry(0.05, 8, 8); // Smaller size for the planet
+    const planetMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Color the planet green
+    const innerPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
 
-    // Position both inner and outer stars at the same location
-    outerStar.position.set(0, 0, 0);
-    innerStar.position.set(0, 0, 0);
+    // Position the inner planet at the center of the virtual star
+    innerPlanet.position.set(0, 0, 0);
+    virtualStar.add(innerPlanet); // Add the planet as a child of the virtual star
 
-    // Group both inner and outer stars together
-    const virtualStarGroup = new THREE.Group();
-    virtualStarGroup.add(outerStar); // Add the outer clickable star
-    virtualStarGroup.add(innerStar); // Add the inner visible star
-    virtualStarGroup.position.set(randomX, randomY, randomZ); // Position the group in space
-
-    // Assign default properties to the group
-    virtualStarGroup.objectData = {
+    // Assign default properties to the virtual star
+    virtualStar.objectData = {
       primaryId: `virtual_star_${i}`, // Unique ID for the virtual star
       properName: `Virtual Star ${i + 1}`, // Name for the star
       type: "VIRTUAL_STAR",
@@ -263,12 +258,13 @@ function createVirtualStars() {
       cartesianCoordsInLys: { x: randomX, y: randomY, z: randomZ } // Default coordinates for virtual stars
     };
 
-    // Add the virtual star group to the scene and relevant arrays
-    scene.add(virtualStarGroup);
-    stars.push(virtualStarGroup); // Add to stars array to be clickable
-    virtualStars.push(virtualStarGroup); // Track in virtualStars array for later removal
+    // Add the virtual star to the scene and relevant arrays
+    scene.add(virtualStar);
+    stars.push(virtualStar); // Add to stars array to be clickable
+    virtualStars.push(virtualStar); // Track in virtualStars array for later removal
   }
 }
+
 
 
 
