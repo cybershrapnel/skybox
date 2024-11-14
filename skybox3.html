@@ -238,32 +238,48 @@ function createVirtualStars() {
     const virtualStar = new THREE.Mesh(clickableGeometry, starMaterial);
     virtualStar.position.set(randomX, randomY, randomZ);
 
-    // Inner Earth-like planet
-    const planetGeometry = new THREE.SphereGeometry(0.05, 16, 16); // Size for the Earth-like planet
-    const planetMaterial = new THREE.MeshBasicMaterial({ map: earthTexture });
-    const innerPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
+    // Inner planet (smaller sphere inside the virtual star)
+    const planetGeometry = new THREE.SphereGeometry(0.05, 8, 8); // Smaller size for the planet
 
-    // Moon (smaller sphere inside the Earth-like planet)
-    const moonGeometry = new THREE.SphereGeometry(0.015, 16, 16); // Smaller size for the moon
-    const moonMaterial = new THREE.MeshBasicMaterial({ map: earthTexture }); // Reusing Earth texture as a placeholder
-    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-
-    // Position the inner planet and moon within the virtual star
-    innerPlanet.position.set(0, 0, 0);
-    moon.position.set(0.08, 0, 0); // Offset the moon slightly from the inner planet to be visible
-
-    // Set object data to identify the moon
-    moon.objectData = {
-      primaryId: `moon_${i}`,
-      properName: `Moon of Virtual Star ${i + 1}`,
-      type: "MOON"
+    // Random color function for dynamic and solid colors
+    const getRandomColor = () => {
+      const colorType = Math.random();
+      if (colorType < 0.3) {
+        if (Math.random() < 0.5) {
+          return new THREE.Color(Math.random() * 0.5, Math.random() * 0.5 + 0.5, 1);
+        } else {
+          return new THREE.Color(1, Math.random() * 0.5, Math.random() * 0.5 + 0.5);
+        }
+      } else {
+        const solidColors = [
+          new THREE.Color(1, 0, 0),      // Red
+          new THREE.Color(0, 1, 0),      // Green
+          new THREE.Color(0, 0, 1),      // Blue
+          new THREE.Color(1, 0, 1)       // Magenta
+        ];
+        return solidColors[Math.floor(Math.random() * solidColors.length)];
+      }
     };
 
-    // Add the moon as a child of the inner planet
-    innerPlanet.add(moon);
+    const planetMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() });
+    const innerPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
+    innerPlanet.position.set(0, 0, 0);
+    virtualStar.add(innerPlanet); // Add the planet as a child of the virtual star
 
-    // Add the inner planet as a child of the virtual star
-    virtualStar.add(innerPlanet);
+    // Innermost moon object with realistic planet texture
+    const moonGeometry = new THREE.SphereGeometry(0.02, 8, 8); // Smaller size for the moon
+    const moonMaterial = new THREE.ShaderMaterial({
+      vertexShader: shaders.rockyPlanetVertexShader, // Assuming shaders are available
+      fragmentShader: shaders.rockyPlanetFragmentShader,
+      uniforms: {
+        texture: { type: 't', value: rockyPlanetTexture } // Assuming a texture or shader for rocky planets is defined
+      }
+    });
+
+    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+    moon.position.set(0.08, 0, 0); // Slight offset from center for visibility
+    moon.objectData = { type: "MOON" }; // Flagged as a moon
+    innerPlanet.add(moon); // Add the moon as a child of the inner planet
 
     // Assign default properties to the virtual star
     virtualStar.objectData = {
