@@ -298,12 +298,20 @@ function createVirtualStars() {
 
 
 
-
 // Function to clear virtual stars
 function removeVirtualStars() {
   virtualStars.forEach(star => {
+    // Remove from the scene
     scene.remove(star);
+
+    // Remove from the stars array
+    const indexInStars = stars.indexOf(star);
+    if (indexInStars !== -1) {
+      stars.splice(indexInStars, 1);
+    }
   });
+
+  // Clear the virtualStars array
   virtualStars = [];
 }
 
