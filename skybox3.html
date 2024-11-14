@@ -220,7 +220,7 @@
 let virtualStars = [];
 
 function createVirtualStars() {
-  const numStars = 100; // Adjust for the desired number of virtual stars
+  const numStars = (10*(renderRadius*renderRadius))-900; // Adjust for the desired number of virtual stars
   const maxDistance = renderRadius * 10; // Set max distance for virtual stars based on render radius
 
   for (let i = 0; i < numStars; i++) {
