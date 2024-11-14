@@ -1253,6 +1253,7 @@ let autoExploreMode = false; // Track if auto explore mode is on
 let autoExploreInterval; // Variable to hold the interval for auto explore
 
 // Function to toggle Auto Explore mode
+// Function to toggle Auto Explore mode
 function toggleAutoExplore() {
   autoExploreMode = !autoExploreMode; // Toggle the mode
 
@@ -1267,13 +1268,12 @@ function toggleAutoExplore() {
 
 // Function to start Auto Explore mode
 function startAutoExplore() {
-  // Set an interval to randomly select and travel to a star every 1-3 seconds
   autoExploreInterval = setInterval(() => {
-    const randomStar = getRandomStar();
+    const randomStar = getRandomVisibleStar();
     if (randomStar) {
-      select(randomStar); // Simulate selecting the star for travel
+      select(randomStar); // Travel to the selected star
     }
-  }, getRandomInterval(4000, 7000)); // Random interval between 1 and 3 seconds
+  }, getRandomInterval(1000, 3000)); // Random interval between 1 and 3 seconds
 }
 
 // Function to stop Auto Explore mode
@@ -1281,10 +1281,9 @@ function stopAutoExplore() {
   clearInterval(autoExploreInterval); // Stop the interval
 }
 
-// Helper function to get a random star from the stars array
-function getRandomStar() {
-  const availableStars = stars.filter(star => star.objectData && star.objectData.type === "STAR");
-  return availableStars[Math.floor(Math.random() * availableStars.length)];
+// Helper function to get a random star from the currently visible stars
+function getRandomVisibleStar() {
+  return visibleStars[Math.floor(Math.random() * visibleStars.length)];
 }
 
 // Helper function to get a random interval between min and max milliseconds
@@ -1294,6 +1293,7 @@ function getRandomInterval(min, max) {
 
 // Add event listener to the Auto Explore button
 document.getElementById("autoExploreButton").addEventListener("click", toggleAutoExplore);
+
 
 
 
