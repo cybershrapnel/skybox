@@ -228,30 +228,27 @@ function createVirtualStars() {
     const randomY = Math.random() * maxDistance - maxDistance / 2;
     const randomZ = Math.random() * maxDistance - maxDistance / 2;
 
-    // Inner star geometry (visual part) - original size
-    const innerStarGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    // Outer star for easier interaction
+    const clickableGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
+    const outerStarMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      opacity: 0.8, // Slightly transparent if desired
+      transparent: true
+    });
+    const outerStar = new THREE.Mesh(clickableGeometry, outerStarMaterial);
+
+    // Inner, smaller visible star
+    const innerStarGeometry = new THREE.SphereGeometry(0.05, 8, 8); // Smaller size for the visual star
     const innerStarMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const innerStar = new THREE.Mesh(innerStarGeometry, innerStarMaterial);
 
-    // Outer hitbox geometry (for click interaction) - larger size
-    const outerHitboxGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
-    const outerHitboxMaterial = new THREE.MeshBasicMaterial({
-      transparent: true,
-      opacity: 0 // Fully invisible for hitbox
-    });
-    const outerHitbox = new THREE.Mesh(outerHitboxGeometry, outerHitboxMaterial);
-
-    // Position both inner and outer hitbox at the same location
-    innerStar.position.set(0, 0, 0);
-    outerHitbox.position.set(0, 0, 0);
-
-    // Group both inner star and outer hitbox together
+    // Group both inner and outer stars
     const virtualStarGroup = new THREE.Group();
-    virtualStarGroup.add(innerStar); // Add inner (visible) star
-    virtualStarGroup.add(outerHitbox); // Add outer (clickable) hitbox
-    virtualStarGroup.position.set(randomX, randomY, randomZ); // Position the group in space
+    virtualStarGroup.add(outerStar); // Add the outer clickable star
+    virtualStarGroup.add(innerStar); // Add the inner visible star
+    virtualStarGroup.position.set(randomX, randomY, randomZ); // Set the group's position
 
-    // Assign properties to the group
+    // Assign default properties to the group
     virtualStarGroup.objectData = {
       primaryId: `virtual_star_${i}`, // Unique ID for the virtual star
       properName: `Virtual Star ${i + 1}`, // Name for the star
