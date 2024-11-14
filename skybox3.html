@@ -263,15 +263,17 @@ function createVirtualStars() {
 
     const planetMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() });
     const innerPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
+
+    // Position the inner planet at the center of the virtual star
     innerPlanet.position.set(0, 0, 0);
     virtualStar.add(innerPlanet); // Add the planet as a child of the virtual star
 
-    // Innermost moon object
+    // Innermost moon object, positioned at the exact center
     const moonGeometry = new THREE.SphereGeometry(0.015, 8, 8); // Smaller size for the moon
     const moonMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 }); // Placeholder color
-
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-    moon.position.set(0.03, 0, 0); // Position inside the inner planet, slightly offset
+
+    moon.position.set(0, 0, 0); // Center moon exactly like the inner planet
     moon.objectData = { type: "MOON" }; // Flag as a moon
     innerPlanet.add(moon); // Add the moon as a child of the inner planet
 
