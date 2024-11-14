@@ -267,11 +267,11 @@ function createVirtualStars() {
     virtualStar.add(innerPlanet); // Add the planet as a child of the virtual star
 
     // Innermost moon object
-    const moonGeometry = new THREE.SphereGeometry(0.02, 8, 8); // Smaller size for the moon
+    const moonGeometry = new THREE.SphereGeometry(0.015, 8, 8); // Smaller size for the moon
     const moonMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 }); // Placeholder color
 
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-    moon.position.set(0.08, 0, 0); // Slight offset for visibility
+    moon.position.set(0.03, 0, 0); // Position inside the inner planet, slightly offset
     moon.objectData = { type: "MOON" }; // Flag as a moon
     innerPlanet.add(moon); // Add the moon as a child of the inner planet
 
@@ -283,7 +283,7 @@ function createVirtualStars() {
       radius: { value: { quantity: 0.01 } }, // Default radius value
       solDistance: { value: { quantity: Math.random() * renderRadius } }, // Random distance within render radius
       nearbyObjectIDs: [], // Empty array to avoid undefined errors
-      cartesianCoordsInLys: { x: randomX, y: randomZ, z: randomY } // Default coordinates for virtual stars
+      cartesianCoordsInLys: { x: randomX, y: randomY, z: randomZ } // Default coordinates for virtual stars
     };
 
     // Add the virtual star to the scene and relevant arrays
@@ -292,7 +292,6 @@ function createVirtualStars() {
     virtualStars.push(virtualStar); // Track in virtualStars array for later removal
   }
 }
-
 
 
 
