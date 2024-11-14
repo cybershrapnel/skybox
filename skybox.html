@@ -269,42 +269,6 @@ function createVirtualStars() {
 
 
 
-    const planetMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() });
-    const innerPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
-
-    // Position the inner planet at the center of the virtual star
-    innerPlanet.position.set(0, 0, 0);
-    virtualStar.add(innerPlanet); // Add the planet as a child of the virtual star
-
-    // Innermost moon object, positioned at the exact center
-    const moonGeometry = new THREE.SphereGeometry(0.005, 8, 8); // Smaller size for the moon
-    const moonMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 }); // Placeholder color
-    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-
-    moon.position.set(0, 0, 0); // Center moon exactly like the inner planet
-    moon.objectData = { type: "MOON" }; // Flag as a moon
-    innerPlanet.add(moon); // Add the moon as a child of the inner planet
-
-    // Assign default properties to the virtual star
-    virtualStar.objectData = {
-      primaryId: `virtual_star_${i}`, // Unique ID for the virtual star
-      properName: `Virtual Star ${i + 1}`, // Name for the star
-      type: "VIRTUAL_STAR",
-      radius: { value: { quantity: 0.01 } }, // Default radius value
-      solDistance: { value: { quantity: Math.random() * renderRadius } }, // Random distance within render radius
-      nearbyObjectIDs: [], // Empty array to avoid undefined errors
-      cartesianCoordsInLys: { x: randomX, y: randomY, z: randomZ } // Default coordinates for virtual stars
-    };
-
-    // Add the virtual star to the scene and relevant arrays
-    scene.add(virtualStar);
-    stars.push(virtualStar); // Add to stars array to be clickable
-    virtualStars.push(virtualStar); // Track in virtualStars array for later removal
-  }
-}
-
-
-
 
 function removeVirtualStars() {
   // Filter out virtual stars from both stars and visibleStars arrays
