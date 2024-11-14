@@ -240,7 +240,8 @@ function createVirtualStars() {
       type: "VIRTUAL_STAR",
       radius: { value: { quantity: 0.01 } }, // Default radius value
       solDistance: { value: { quantity: Math.random() * renderRadius } }, // Random distance within render radius
-      nearbyObjectIDs: [] // Empty array to avoid undefined errors
+      nearbyObjectIDs: [], // Empty array to avoid undefined errors
+      cartesianCoordsInLys: { x: randomX, y: randomY, z: randomZ } // Default coordinates for virtual stars
     };
 
     // Add star to the scene, store it in stars array, and mark it as selectable
@@ -249,6 +250,7 @@ function createVirtualStars() {
     virtualStars.push(virtualStar); // Keep track in virtualStars array for later removal
   }
 }
+
 
 
 // Function to clear virtual stars
@@ -787,13 +789,18 @@ function onMouseClick(event) {
     return new THREE.Sprite(SPRITE_MATERIAL);
   }
 
-  function setOffset(raw, current, offset) {
-
-    current.x = raw.x - offset.x;
-    current.y = raw.y - offset.y;
-    current.z = raw.z - offset.z;
-
+function setOffset(raw, current, offset) {
+  // Ensure raw and offset have the necessary properties
+  if (!raw || !offset || !current) {
+    console.warn("Missing data in setOffset:", { raw, current, offset });
+    return;
   }
+
+  current.x = raw.x - offset.x;
+  current.y = raw.y - offset.y;
+  current.z = raw.z - offset.z;
+}
+
 
   function currentOffset(position) {
     var pos = new THREE.Vector3();
@@ -805,95 +812,78 @@ function onMouseClick(event) {
   }
 
   function select(mesh) {
+  if (mesh) {
+    var newTarget = mesh.objectData;
 
-    if (mesh) {
+    // Check if the target is a star and retrieve or set default offset
+    if (isStar(mesh)) {
+      var offset = mesh.objectData.cartesianCoordsInLys || { x: 0, y: 0, z: 0 }; // Default to {0,0,0} if missing
 
-      var newTarget = mesh.objectData;
-
-
-      if (isStar(mesh)) {
-        var offset = mesh.objectData.cartesianCoordsInLys;
-
-        stars.forEach(function (e) {
+      // Update positions of all stars relative to the selected star
+      stars.forEach(function (e) {
+        if (e.objectData.cartesianCoordsInLys) { // Only set offset if coords exist
           setOffset(e.objectData.cartesianCoordsInLys, e.position, offset);
-        });
-
-        setOffset(currentOffset(camera.position), camera.position, offset);
-        setOffset(ZERO, solMarker.mesh.position, offset);
-
-      }
-
-      if (newTarget != null) {
-        var newTargetPrimaryId = newTarget.primaryId;
-
-        if (newTargetPrimaryId != currentObjectPrimaryId) {
-
-          $('#info-header').text(newTarget.properName);
-
-          var infoTable = $('#info-table');
-          infoTable.empty();
-
-          infoTable
-              .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Characteristics')))
-              .append(row("Radius", getValue(newTarget, 'radius')));
-
-          if (newTarget.type == "STAR") {
-
-            infoTable
-                .append(row("Class", newTarget.rawStellarClassification))
-                .append(row("Temperature", getValue(newTarget, 'temperatureEstimate')))
-                .append(row("Distance (Sol)", getValue(newTarget, 'solDistance')))
-                .append(row("Right ascension", getValue(newTarget, 'rightAscensionRadians')))
-                .append(row("Declination", getValue(newTarget, 'declinationRadians')))
-                .append(row("Abs Magnitude", getValue(newTarget, 'absoluteMagnitude')))
-                .append(row("", ""))
-                .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Identifiers')))
-                .append(row("Proper Name", newTarget.identifiers.properName))
-                .append(row("Hipparcos", newTarget.identifiers.hipparcosId))
-                .append(row("Henry Draper", newTarget.identifiers.henryDraperId))
-                .append(row("Harvard Revised", newTarget.identifiers.harvardRevised))
-                .append(row("Gliese", newTarget.identifiers.glieseId))
-                .append(row("Bayer Flamsteed", bfName(newTarget.identifiers.bayerFlamsteed)))
-            ;
-
-
-//            private String hipparcosId;
-//            private String henryDraperId;
-//            private String harvardRevisedId;
-//            private String glieseId;
-//            private BayerFlamsteed bayerFlamsteed;
-//            private String properName;
-
-
-          } else {
-
-            infoTable
-                .append(row("Mass", getValue(newTarget, 'massKg')))
-                .append(row("Density", getValue(newTarget, 'densityGcc')))
-                .append(row("Orbital Period", getValue(newTarget, 'orbitalPeriodDays')))
-                .append(row("Semi-Major axis", getValue(newTarget, 'semiMajorAxisLys')))
-                .append(row("Semi-Minor axis", getValue(newTarget, 'semiMinorAxisLys')))
-                .append(row("Inclination", getValue(newTarget, 'inclination')))
-                .append(row("Lon asc node", getValue(newTarget, 'longAscendingNode')))
-                .append(row("Arg periapsis", getValue(newTarget, 'argumentPeriapsis')))
-
-          }
-
-          var prevTargetMesh = currentObjectMesh;
-          updateCurrentTargets(mesh);
-
-          updateTarget(prevTargetMesh);
-
-          doReassign(currentObjectMesh);
-
         }
-      }
+      });
 
-
+      // Update camera and solMarker positions
+      setOffset(currentOffset(camera.position), camera.position, offset);
+      setOffset(ZERO, solMarker.mesh.position, offset);
     }
 
+    if (newTarget != null) {
+      var newTargetPrimaryId = newTarget.primaryId;
 
+      // If we're switching to a different target
+      if (newTargetPrimaryId != currentObjectPrimaryId) {
+        $('#info-header').text(newTarget.properName);
+
+        var infoTable = $('#info-table');
+        infoTable.empty();
+
+        // Populate info table with details about the new target
+        infoTable
+            .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Characteristics')))
+            .append(row("Radius", getValue(newTarget, 'radius')));
+
+        if (newTarget.type == "STAR") {
+          infoTable
+              .append(row("Class", newTarget.rawStellarClassification || "Unknown"))
+              .append(row("Temperature", getValue(newTarget, 'temperatureEstimate') || "N/A"))
+              .append(row("Distance (Sol)", getValue(newTarget, 'solDistance') || "Unknown"))
+              .append(row("Right ascension", getValue(newTarget, 'rightAscensionRadians') || "Unknown"))
+              .append(row("Declination", getValue(newTarget, 'declinationRadians') || "Unknown"))
+              .append(row("Abs Magnitude", getValue(newTarget, 'absoluteMagnitude') || "Unknown"))
+              .append(row("", ""))
+              .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Identifiers')))
+              .append(row("Proper Name", newTarget.properName || "Unnamed Star"))
+              .append(row("Hipparcos", newTarget.identifiers?.hipparcosId || "Unknown"))
+              .append(row("Henry Draper", newTarget.identifiers?.henryDraperId || "Unknown"))
+              .append(row("Harvard Revised", newTarget.identifiers?.harvardRevised || "Unknown"))
+              .append(row("Gliese", newTarget.identifiers?.glieseId || "Unknown"))
+              .append(row("Bayer Flamsteed", bfName(newTarget.identifiers?.bayerFlamsteed) || "Unknown"));
+        } else {
+          // If the object is a planet or something other than a star
+          infoTable
+              .append(row("Mass", getValue(newTarget, 'massKg') || "Unknown"))
+              .append(row("Density", getValue(newTarget, 'densityGcc') || "Unknown"))
+              .append(row("Orbital Period", getValue(newTarget, 'orbitalPeriodDays') || "Unknown"))
+              .append(row("Semi-Major axis", getValue(newTarget, 'semiMajorAxisLys') || "Unknown"))
+              .append(row("Semi-Minor axis", getValue(newTarget, 'semiMinorAxisLys') || "Unknown"))
+              .append(row("Inclination", getValue(newTarget, 'inclination') || "Unknown"))
+              .append(row("Lon asc node", getValue(newTarget, 'longAscendingNode') || "Unknown"))
+              .append(row("Arg periapsis", getValue(newTarget, 'argumentPeriapsis') || "Unknown"));
+        }
+
+        var prevTargetMesh = currentObjectMesh;
+        updateCurrentTargets(mesh);
+        updateTarget(prevTargetMesh);
+        doReassign(currentObjectMesh); // Update label for the selected target
+      }
+    }
   }
+}
+
 
   function bfName(bayerFlamsteed) {
     if (bayerFlamsteed) {
