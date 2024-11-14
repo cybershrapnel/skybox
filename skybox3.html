@@ -228,20 +228,31 @@ function createVirtualStars() {
     const randomY = Math.random() * maxDistance - maxDistance / 2;
     const randomZ = Math.random() * maxDistance - maxDistance / 2;
 
-    // Create a larger geometry for interaction, but keep the material as usual
-    const clickableGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
-    const starMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      opacity: 0.8, // Slightly transparent if desired
-      transparent: true
+    // Inner star geometry (visual part) - original size
+    const innerStarGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const innerStarMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const innerStar = new THREE.Mesh(innerStarGeometry, innerStarMaterial);
+
+    // Outer hitbox geometry (for click interaction) - larger size
+    const outerHitboxGeometry = new THREE.SphereGeometry(0.3, 8, 8); // Larger size for easier clicking
+    const outerHitboxMaterial = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0 // Fully invisible for hitbox
     });
+    const outerHitbox = new THREE.Mesh(outerHitboxGeometry, outerHitboxMaterial);
 
-    // Create the virtual star mesh
-    const virtualStar = new THREE.Mesh(clickableGeometry, starMaterial);
-    virtualStar.position.set(randomX, randomY, randomZ);
+    // Position both inner and outer hitbox at the same location
+    innerStar.position.set(0, 0, 0);
+    outerHitbox.position.set(0, 0, 0);
 
-    // Assign default properties to the virtual star
-    virtualStar.objectData = {
+    // Group both inner star and outer hitbox together
+    const virtualStarGroup = new THREE.Group();
+    virtualStarGroup.add(innerStar); // Add inner (visible) star
+    virtualStarGroup.add(outerHitbox); // Add outer (clickable) hitbox
+    virtualStarGroup.position.set(randomX, randomY, randomZ); // Position the group in space
+
+    // Assign properties to the group
+    virtualStarGroup.objectData = {
       primaryId: `virtual_star_${i}`, // Unique ID for the virtual star
       properName: `Virtual Star ${i + 1}`, // Name for the star
       type: "VIRTUAL_STAR",
@@ -251,12 +262,13 @@ function createVirtualStars() {
       cartesianCoordsInLys: { x: randomX, y: randomY, z: randomZ } // Default coordinates for virtual stars
     };
 
-    // Add virtual star to the scene and relevant arrays
-    scene.add(virtualStar);
-    stars.push(virtualStar); // Add to stars array to be clickable
-    virtualStars.push(virtualStar); // Track in virtualStars array for later removal
+    // Add the virtual star group to the scene and relevant arrays
+    scene.add(virtualStarGroup);
+    stars.push(virtualStarGroup); // Add to stars array to be clickable
+    virtualStars.push(virtualStarGroup); // Track in virtualStars array for later removal
   }
 }
+
 
 
 
