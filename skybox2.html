@@ -658,45 +658,45 @@ function updateHighlight(starMesh) {
     return best;
 
   }
+function getStarForPoint(x, y) {
+  if (x && y) {
+    mouse.x = (x / window.innerWidth) * 2 - 1;
+    mouse.y = -(y / window.innerHeight) * 2 + 1;
 
-  function getStarForPoint(x, y) {
+    intersectCamera.position.copy(camera.position);
+    intersectCamera.rotation.copy(camera.rotation);
 
-    if (x && y) {
+    raycaster.setFromCamera(mouse, intersectCamera);
 
-      mouse.x = ( x / window.innerWidth ) * 2 - 1;
-      mouse.y = -( y / window.innerHeight ) * 2 + 1;
-
-      intersectCamera.position.copy(camera.position);
-      intersectCamera.rotation.copy(camera.rotation);
-
-      raycaster.setFromCamera(mouse, intersectCamera);
-
-
-      if (currentSystem) {
-        var last = closestNonPrimaryObject(raycaster.intersectObjects(currentSystem.selectable, false), currentObjectPrimaryId, currentSystem.star.objectData.primaryId);
-        if (last) {
-          return currentSystem.objectsByID[last.objectData.primaryId];
-        }
+    // Check intersection with objects in the current system, if applicable
+    if (currentSystem) {
+      var last = closestNonPrimaryObject(raycaster.intersectObjects(currentSystem.selectable, false), currentObjectPrimaryId, currentSystem.star.objectData.primaryId);
+      if (last) {
+        return currentSystem.objectsByID[last.objectData.primaryId];
       }
-
-      var lastStar = closestNonPrimaryObject(raycaster.intersectObjects(visibleStars, false), currentObjectPrimaryId, null);
-
-      if (lastStar) {
-//        var primaryId = lastStar.objectData.primaryId;
-        return lastStar;
-      }
-
-      if (tooltip) {
-        var text = raycaster.intersectObjects(tooltip.scaleObj.children, false);
-        if (text.length > 0) {
-          return tooltipObject;
-        }
-      }
-
     }
 
-    return null;
+    // Combine visibleStars and virtualStars for the raycasting check
+    var allStars = visibleStars.concat(virtualStars);
+
+    // Check intersections with all stars, including virtual ones
+    var lastStar = closestNonPrimaryObject(raycaster.intersectObjects(allStars, false), currentObjectPrimaryId, null);
+
+    if (lastStar) {
+      return lastStar;
+    }
+
+    // Check intersection with the tooltip, if applicable
+    if (tooltip) {
+      var text = raycaster.intersectObjects(tooltip.scaleObj.children, false);
+      if (text.length > 0) {
+        return tooltipObject;
+      }
+    }
   }
+  return null;
+}
+
 
   function setMouseXY(event) {
     mouseX = event.clientX;
@@ -728,17 +728,19 @@ function updateHighlight(starMesh) {
     }
   }
 
-  function onMouseClick(event) {
+function onMouseClick(event) {
+  const diffX = Math.abs(mouseDownX - event.clientX);
+  const diffY = Math.abs(mouseDownY - event.clientY);
+  const delta = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
 
-    var diffX = Math.abs(mouseDownX - event.clientX);
-    var diffY = Math.abs(mouseDownY - event.clientY);
-    var delta = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
-
-    if (delta < 5) {
-      select(getStarForPoint(event.clientX, event.clientY));
+  if (delta < 5) {
+    const clickedStar = getStarForPoint(event.clientX, event.clientY);
+    if (clickedStar) {
+      select(clickedStar); // Select the clicked star, whether regular or virtual
     }
-
   }
+}
+
 
   function initializeobjectData() {
 
