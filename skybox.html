@@ -1253,7 +1253,6 @@ let autoExploreMode = false; // Track if auto explore mode is on
 let autoExploreInterval; // Variable to hold the interval for auto explore
 
 // Function to toggle Auto Explore mode
-// Function to toggle Auto Explore mode
 function toggleAutoExplore() {
   autoExploreMode = !autoExploreMode; // Toggle the mode
 
@@ -1281,9 +1280,10 @@ function stopAutoExplore() {
   clearInterval(autoExploreInterval); // Stop the interval
 }
 
-// Helper function to get a random star from the currently visible stars
+// Helper function to get a random star from all currently visible stars, including virtual stars
 function getRandomVisibleStar() {
-  return visibleStars[Math.floor(Math.random() * visibleStars.length)];
+  const allStars = visibleStars.concat(virtualStars); // Combine visible and virtual stars
+  return allStars[Math.floor(Math.random() * allStars.length)];
 }
 
 // Helper function to get a random interval between min and max milliseconds
@@ -1293,7 +1293,6 @@ function getRandomInterval(min, max) {
 
 // Add event listener to the Auto Explore button
 document.getElementById("autoExploreButton").addEventListener("click", toggleAutoExplore);
-
 
 
 
