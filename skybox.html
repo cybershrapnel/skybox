@@ -167,13 +167,34 @@
   </div>
 
   <div id="attribution-overlay">
+   <span id="page-counter"></span>
     <a href="http://nanocheeze.com">NanoCheeZe.com</a><br />
-    <img height=15 src="https://hitcounter.pythonanywhere.com/count/tag.svg" alt="Hits">
+   
   </div>
 
   <canvas id='webgl_canvas'></canvas>
 </div>
 
+<script>
+    // Encode the current page's URL
+    const pageURL = encodeURIComponent(window.location.href);
+    const counterURL = `https://www.xtdevelopment.net/hits/index.php?page=${pageURL}`;
+
+    // Fetch the hit count from the server
+    fetch(counterURL)
+        .then(response => response.json())
+        .then(data => {
+            if (data.hits) {
+                document.getElementById('page-counter').textContent = `Visits: ${data.hits}`;
+            } else {
+                document.getElementById('page-counter').textContent = 'Visit count unavailable';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching visit count:', error);
+            document.getElementById('page-counter').textContent = 'Visit count unavailable';
+        });
+</script>
 <script>
 
   $(function () {
