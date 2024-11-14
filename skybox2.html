@@ -940,20 +940,26 @@ function setOffset(raw, current, offset) {
         .append($('<td></td>').text(value).addClass('info-element'))
   }
 
-  function getValue(data, element) {
-    var elem = data[element];
+function getValue(data, element) {
+  var elem = data[element];
 
-    //  just a value
-    if (!elem.source) {
-      return elem;
-    }
-
-    if (elem.source == "DEFAULT") {
-      return "?";
-    }
-
-    return formatObjValue(elem);
+  // Return "Unknown" if the element is missing or undefined
+  if (!elem) {
+    return "Unknown";
   }
+
+  // Continue if the element has a value or source
+  if (!elem.source) {
+    return elem;
+  }
+
+  if (elem.source == "DEFAULT") {
+    return "?";
+  }
+
+  return formatObjValue(elem);
+}
+
 
   function formatObjValue(elem) {
 
