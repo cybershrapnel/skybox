@@ -499,45 +499,41 @@ document.getElementById('virtual_stars_checkbox').addEventListener('change', fun
     return vector;
   }
 
-  function doReassign(targetMesh) {
+ function doReassign(targetMesh) {
+  tooltipObject = targetMesh;
 
-    tooltipObject = targetMesh;
-
-    scene.remove(lineSegment);
-    if (tooltip) {
-      scene.remove(tooltip.object);
-    }
-
-    var targetPos = absolutePosition(targetMesh);
-
-    var geometry = new THREE.Geometry();
-    var currentObjPosition = absolutePosition(currentObjectMesh);
-
-    geometry.vertices.push(currentObjPosition);
-    geometry.vertices.push(targetPos);
-    lineSegment = new THREE.Line(geometry, lineMaterial);
-
-    var lineDistance = currentObjectMesh.position.distanceTo(targetPos);
-    var label = targetMesh.objectData.properName;
-    var cacheKey = label + lineDistance;  // could target each star from each other star.
-
-    if (!labelCache[(cacheKey)]) {
-      labelCache[cacheKey] = new TooltipMarker(label, prettyDistance(lineDistance), targetMesh.objectData.radius.value.quantity);
-    }
-
-    tooltip = labelCache[cacheKey];
-    tooltip.object.position.set(
-        targetPos.x,
-        targetPos.y,
-        targetPos.z
-    );
-
-    scene.add(lineSegment);
-    scene.add(tooltip.object);
-
-    tooltip.updateTo(camera);
-
+  scene.remove(lineSegment);
+  if (tooltip) {
+    scene.remove(tooltip.object);
   }
+
+  var targetPos = absolutePosition(targetMesh);
+  var geometry = new THREE.Geometry();
+  var currentObjPosition = absolutePosition(currentObjectMesh);
+
+  geometry.vertices.push(currentObjPosition);
+  geometry.vertices.push(targetPos);
+  lineSegment = new THREE.Line(geometry, lineMaterial);
+
+  var lineDistance = currentObjectMesh ? currentObjectMesh.position.distanceTo(targetPos) : 0;
+  var label = targetMesh.objectData.properName || "Unnamed Star";
+  var cacheKey = label + lineDistance;
+
+  // Check if radius exists before attempting to access `value.quantity`
+  var radiusQuantity = targetMesh.objectData.radius?.value?.quantity || 0.01; // Default to a small value if missing
+
+  if (!labelCache[cacheKey]) {
+    labelCache[cacheKey] = new TooltipMarker(label, prettyDistance(lineDistance), radiusQuantity);
+  }
+
+  tooltip = labelCache[cacheKey];
+  tooltip.object.position.set(targetPos.x, targetPos.y, targetPos.z);
+
+  scene.add(lineSegment);
+  scene.add(tooltip.object);
+
+  tooltip.updateTo(camera);
+}
 
   function isRender(objectData) {
 
