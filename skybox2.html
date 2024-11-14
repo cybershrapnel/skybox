@@ -218,27 +218,36 @@
 // Array to store virtual stars
 let virtualStars = [];
 
-// Function to create random stars
 function createVirtualStars() {
   const numStars = 100; // Adjust for the desired number of virtual stars
   const maxDistance = renderRadius * 10; // Set max distance for virtual stars based on render radius
 
-  // Create random stars
   for (let i = 0; i < numStars; i++) {
     const randomX = Math.random() * maxDistance - maxDistance / 2;
     const randomY = Math.random() * maxDistance - maxDistance / 2;
     const randomZ = Math.random() * maxDistance - maxDistance / 2;
 
-    const starGeometry = new THREE.SphereGeometry(0.05, 8, 8); // Smaller size for virtual stars
+    // Create geometry and material for the virtual star
+    const starGeometry = new THREE.SphereGeometry(0.05, 8, 8);
     const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const virtualStar = new THREE.Mesh(starGeometry, starMaterial);
-    virtualStar.position.set(randomX, randomY, randomZ);
 
-    // Add star to the scene and store in virtualStars array
+    // Set position and assign unique properties
+    virtualStar.position.set(randomX, randomY, randomZ);
+    virtualStar.objectData = {
+      primaryId: `virtual_star_${i}`, // Unique ID for the virtual star
+      properName: `Virtual Star ${i + 1}`, // Name for the star
+      type: "VIRTUAL_STAR",
+      solDistance: { value: { quantity: Math.random() * renderRadius } } // Random distance within render radius
+    };
+
+    // Add star to the scene, store it in stars array, and mark it as selectable
     scene.add(virtualStar);
-    virtualStars.push(virtualStar);
+    stars.push(virtualStar); // Add to stars array to be clickable
+    virtualStars.push(virtualStar); // Keep track in virtualStars array for later removal
   }
 }
+
 
 // Function to clear virtual stars
 function removeVirtualStars() {
@@ -536,29 +545,29 @@ document.getElementById('virtual_stars_checkbox').addEventListener('change', fun
     return false;
   }
 
-  function updateHighlight(starMesh) {
-    var highlight = starMesh.children[0];
+function updateHighlight(starMesh) {
+  const highlight = starMesh.children[0];
 
-    if (highlightMode == 'none' ||
-        (currentSystem && starMesh.objectData.primaryId == currentSystem.star.objectData.primaryId)) {
-      if (highlight) {
-        starMesh.remove(highlight);
-      }
-    } else if (highlightMode == 'exoplanets') {
-      if (planetsByStarID[starMesh.objectData.primaryId][0]) {
-        if (!highlight) {
-          starMesh.add(createHighlightSprite());
-        }
-      } else {
-        starMesh.remove(highlight);
-      }
-    } else if (highlightMode == 'all') {
+  if (highlightMode === 'none' ||
+      (currentSystem && starMesh.objectData.primaryId === currentSystem.star.objectData.primaryId)) {
+    if (highlight) {
+      starMesh.remove(highlight);
+    }
+  } else if (highlightMode === 'exoplanets' && starMesh.objectData.type === "STAR") {
+    if (planetsByStarID[starMesh.objectData.primaryId][0]) {
       if (!highlight) {
         starMesh.add(createHighlightSprite());
       }
+    } else {
+      starMesh.remove(highlight);
     }
-
+  } else if (highlightMode === 'all' || starMesh.objectData.type === "VIRTUAL_STAR") {
+    if (!highlight) {
+      starMesh.add(createHighlightSprite());
+    }
   }
+}
+
 
   function updateobjectData() {
 
