@@ -1100,6 +1100,19 @@
     return b.toFixed(digits) + units[i];
   }
 
+function renameSolIfCustom(catalogObj) {
+  if (!catalogObj || !Array.isArray(catalogObj.stars)) return catalogObj;
+
+  const rand = Math.floor(Math.random() * 900000) + 100000; // 6-digit
+  catalogObj.stars.forEach(s => {
+    if (String(s.primaryId) === "1") {
+      s.properName = `Virtual Sol Outpost ${rand}`;
+    }
+  });
+
+  return catalogObj;
+}
+  
   function resetCatalogScene() {
     try { if (tooltip) { scene.remove(tooltip.object); tooltip = null; } } catch(e){}
     try { if (lineSegment) { scene.remove(lineSegment); lineSegment = null; } } catch(e){}
@@ -1178,42 +1191,52 @@
     return url + (url.indexOf("?") === -1 ? "?" : "&") + "ts=" + ts;
   }
 
-  function loadCatalogFromURL(url, isCustom) {
-    if (catalogStatusEl) {
-      catalogStatusEl.style.color = "#ffb";
-      catalogStatusEl.textContent = "Loading catalog...";
-    }
+function loadCatalogFromURL(url, isCustom) {
+  if (catalogStatusEl) {
+    catalogStatusEl.style.color = "#ffb";
+    catalogStatusEl.textContent = "Loading catalog...";
+  }
 
-    return $.ajax({
-      type: "GET",
-      dataType: "text",
-      cache: false,
-      url: cacheBust(url),
-      headers: { "Cache-Control": "no-store" },
-      success: function (data) {
-        try {
-          var parsed = validateCatalogObject(JSON.parse(data));
-          applyCatalogObject(parsed, !!isCustom);
+  return $.ajax({
+    type: "GET",
+    dataType: "text",
+    cache: false,
+    url: cacheBust(url),
+    headers: { "Cache-Control": "no-store" },
+    success: function (data) {
+      try {
+        // 1) parse raw JSON
+        var obj = JSON.parse(data);
 
-          if (!isCustom && catalogStatusEl && mapAlive) {
-            catalogStatusEl.style.color = "#cfcfcf";
-            catalogStatusEl.textContent = "Using server catalog.";
-          }
-        } catch(e) {
-          if (catalogStatusEl) {
-            catalogStatusEl.style.color = "#f88";
-            catalogStatusEl.textContent = "Invalid catalog JSON.";
-          }
+        // 2) ONLY for custom starmaps, rename Sol
+        if (isCustom) obj = renameSolIfCustom(obj);
+
+        // 3) validate/fill defaults
+        var parsed = validateCatalogObject(obj);
+
+        // 4) apply to scene
+        applyCatalogObject(parsed, !!isCustom);
+
+        if (!isCustom && catalogStatusEl && mapAlive) {
+          catalogStatusEl.style.color = "#cfcfcf";
+          catalogStatusEl.textContent = "Using server catalog.";
         }
-      },
-      error: function () {
+      } catch (e) {
         if (catalogStatusEl) {
           catalogStatusEl.style.color = "#f88";
-          catalogStatusEl.textContent = "Catalog failed to load.";
+          catalogStatusEl.textContent = "Invalid catalog JSON.";
         }
       }
-    });
-  }
+    },
+    error: function () {
+      if (catalogStatusEl) {
+        catalogStatusEl.style.color = "#f88";
+        catalogStatusEl.textContent = "Catalog failed to load.";
+      }
+    }
+  });
+}
+
 
   // File picker
   if (loadCatalogBtn && catalogFileInput) {
@@ -1230,8 +1253,14 @@
       reader.onload = function() {
         try {
           var raw = reader.result;
-          var parsed = validateCatalogObject(JSON.parse(raw));
-          applyCatalogObject(parsed, true);
+var obj = JSON.parse(raw);
+
+// file picker is always custom
+obj = renameSolIfCustom(obj);
+
+var parsed = validateCatalogObject(obj);
+applyCatalogObject(parsed, true);
+
         } catch(e) {
           if (catalogStatusEl) {
             catalogStatusEl.style.color = "#f88";
