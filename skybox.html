@@ -274,6 +274,29 @@
   padding:0 4px;
 }
 
+/* ✅ NEW minimap hover bar */
+#minimapHoverBar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 4px 8px;
+  font-size: 11px;
+  color:#ddd;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(20,20,28,0.85);
+}
+#minimapHoverName{
+  color:#cfe3ff;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: 190px;
+}
+#minimapHoverDist{
+  color:#9fb8a2;
+  white-space:nowrap;
+}
+
 #minimapCanvas{
   width: 280px;
   height: 280px;
@@ -533,6 +556,12 @@
   <div id="minimapHeader">
     <span>Star Minimap</span>
     <button id="minimapClose" title="Close">×</button>
+  </div>
+
+  <!-- ✅ NEW hover readout above minimap -->
+  <div id="minimapHoverBar">
+    <span id="minimapHoverName">Hover a star…</span>
+    <span id="minimapHoverDist"></span>
   </div>
 
   <canvas id="minimapCanvas" width="280" height="280"></canvas>
@@ -2151,6 +2180,15 @@ const minimapCanvas = document.getElementById("minimapCanvas");
 const mmCtx         = minimapCanvas ? minimapCanvas.getContext("2d") : null;
 const axisLabelEl   = document.getElementById("minimapAxisLabel");
 
+/* ✅ NEW minimap hover HUD elements */
+const minimapHoverNameEl = document.getElementById("minimapHoverName");
+const minimapHoverDistEl = document.getElementById("minimapHoverDist");
+
+function clearMinimapHover(){
+  if (minimapHoverNameEl) minimapHoverNameEl.textContent = "Hover a star…";
+  if (minimapHoverDistEl) minimapHoverDistEl.textContent = "";
+}
+
 function getRawOf(mesh){
   if (!mesh) return {x:0,y:0,z:0};
   const c = mesh.objectData && mesh.objectData.cartesianCoordsInLys;
@@ -2251,6 +2289,56 @@ function maybeDrawMinimap(){
   }
 }
 
+/* ✅ NEW minimap hover detector */
+function updateMinimapHover(ev){
+  if (!minimapOpen || !minimapCanvas) return;
+
+  const rect = minimapCanvas.getBoundingClientRect();
+  const scaleX = minimapCanvas.width  / rect.width;
+  const scaleY = minimapCanvas.height / rect.height;
+
+  const cx = (ev.clientX - rect.left) * scaleX - minimapCanvas.width/2;
+  const cy = (ev.clientY - rect.top)  * scaleY - minimapCanvas.height/2;
+
+  const plane  = minimapPlanes[minimapPlaneIndex];
+  const center = getMinimapCenterRaw();
+  const pxPerLy = MINIMAP_BASE_PX_PER_LY * minimapZoom;
+
+  const allStars = visibleStars.concat(virtualStars || []);
+  let best = null;
+  let bestPx = Infinity;
+
+  for (const s of allStars) {
+    if (!s || !s.objectData) continue;
+    if (!isRender(s.objectData)) continue;
+
+    const raw = getRawOf(s);
+    const sx = (raw[plane.a] - center[plane.a]) * pxPerLy;
+    const sy = -(raw[plane.b] - center[plane.b]) * pxPerLy;
+
+    const d = Math.hypot(sx - cx, sy - cy);
+    if (d < bestPx) { bestPx = d; best = s; }
+  }
+
+  const HOVER_THRESH_PX = 8;
+
+  if (best && bestPx <= HOVER_THRESH_PX) {
+    const data = best.objectData;
+    const name = data.properName || ("Star " + data.primaryId);
+
+    const rawB = getRawOf(best);
+    const dx = rawB.x - center.x;
+    const dy = rawB.y - center.y;
+    const dz = rawB.z - center.z;
+    const dist3d = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+    if (minimapHoverNameEl) minimapHoverNameEl.textContent = name;
+    if (minimapHoverDistEl) minimapHoverDistEl.textContent = prettyLy(dist3d);
+  } else {
+    clearMinimapHover();
+  }
+}
+
 // Canvas click => select nearest star in that 2D plane
 if (minimapCanvas) {
   minimapCanvas.addEventListener("click", function(ev){
@@ -2286,6 +2374,10 @@ if (minimapCanvas) {
       drawMinimap();    // refresh highlight
     }
   });
+
+  /* ✅ NEW hover listeners */
+  minimapCanvas.addEventListener("mousemove", updateMinimapHover);
+  minimapCanvas.addEventListener("mouseleave", clearMinimapHover);
 }
 
 // Toggle / controls
@@ -2299,10 +2391,12 @@ function openMinimap(){
   minimapOpen = true;
   if (minimapPopup) minimapPopup.style.display = "block";
   drawMinimap();
+  clearMinimapHover(); // ✅ reset hover bar on open
 }
 function closeMinimap(){
   minimapOpen = false;
   if (minimapPopup) minimapPopup.style.display = "none";
+  clearMinimapHover(); // ✅ clear hover bar on close
 }
 function toggleMinimap(){
   if (minimapOpen) closeMinimap();
