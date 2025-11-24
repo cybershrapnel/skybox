@@ -96,7 +96,7 @@
         <input id="jump_to_list" type="text">
       </div>
     </div>
-    
+
     <h3>MEQUAVIS Location Data</h3>
     <div class="overlay-panel">
       <div class="ui-widget">
@@ -108,7 +108,7 @@
                              hint: There is only 1 active layer atm</center></font>
       </div>
     </div>
-    
+
     <h3>Load and View in VR</h3>
     <div class="overlay-panel">
       <div class="ui-widget">
@@ -116,7 +116,7 @@
       </div>
     </div>
 
-    <!-- NEW: Catalog panel -->
+    <!-- Catalog panel -->
     <h3>Catalog</h3>
     <div class="overlay-panel">
       <div class="ui-widget">
@@ -200,7 +200,7 @@
           </td>
         </tr>
 
-        <!-- NEW: Menu collapse -->
+        <!-- Menu collapse -->
         <tr class="header-row overlay-header">
           <td><b>Menu</b></td>
         </tr>
@@ -224,26 +224,24 @@
 </div>
 
 <script>
-  // Encode the current page's URL
+  // visits counter
   const pageURL = encodeURIComponent(window.location.href);
   const counterURL = `https://www.xtdevelopment.net/hits/index.php?page=${pageURL}`;
 
-  // Fetch the hit count from the server
+  // DEFAULT CATALOG (LOCAL to skybox.nanocheeze.com)
+  const DEFAULT_CATALOG_URL = "star_catalog.txt";  // relative = same server as skybox.html
+
   fetch(counterURL)
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
-      if (data.hits) {
-        document.getElementById('page-counter').textContent = `Visits: ${data.hits}`;
-      } else {
-        document.getElementById('page-counter').textContent = 'Visit count unavailable';
-      }
+      document.getElementById('page-counter').textContent =
+        data.hits ? `Visits: ${data.hits}` : 'Visit count unavailable';
     })
-    .catch(error => {
-      console.error('Error fetching visit count:', error);
+    .catch(() => {
       document.getElementById('page-counter').textContent = 'Visit count unavailable';
     });
 
-  // Array to store virtual stars
+  // virtual stars
   let virtualStars = [];
 
   function createVirtualStars() {
@@ -313,14 +311,11 @@
     }
   }
 
-  // Function to clear virtual stars
   function removeVirtualStars() {
     virtualStars.forEach(star => {
       scene.remove(star);
       const indexInStars = stars.indexOf(star);
-      if (indexInStars !== -1) {
-        stars.splice(indexInStars, 1);
-      }
+      if (indexInStars !== -1) stars.splice(indexInStars, 1);
     });
     virtualStars = [];
   }
@@ -332,8 +327,8 @@
 </script>
 
 <script>
+  // accordion + collapse
   $(function () {
-    // Catalog tab open on start (index 4)
     $("#selector").accordion({
       collapsible: true,
       animate: 100,
@@ -341,7 +336,6 @@
       active: 4
     });
 
-    // Collapse menu behavior
     let menuCollapsed = false;
 
     function collapseMenu() {
@@ -350,7 +344,6 @@
       const $panels = $headers.next();
 
       $acc.accordion("option", "active", false);
-
       $headers.not(":first").hide();
       $panels.not(":first").hide();
 
@@ -402,32 +395,15 @@
 
   var clock = new THREE.Clock();
 
-  var solMarker = new DynamicMarker(
-    new THREE.Vector3(0, 0, 0),
-    SOL_MARKER_RADIUS,
-    0x0000FF,
-    0
-  );
+  var solMarker = new DynamicMarker(new THREE.Vector3(0, 0, 0), SOL_MARKER_RADIUS, 0x0000FF, 0);
 
-  var selector = new DynamicMarker(
-    new THREE.Vector3(0, 0, 0),
-    MARKER_RADIUS,
-    0x00b33c,
-    Math.PI / 4
-  );
+  var selector = new DynamicMarker(new THREE.Vector3(0, 0, 0), MARKER_RADIUS, 0x00b33c, Math.PI / 4);
 
-  var lineMaterial = new THREE.LineBasicMaterial({
-    color: 0x0000ff,
-    depthWrite: false
-  });
+  var lineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, depthWrite: false });
 
-  var uniforms = {
-    time: {type: "f", value: 1.0},
-    scale: {type: "f", value: 80}
-  };
+  var uniforms = { time: {type: "f", value: 1.0}, scale: {type: "f", value: 80} };
 
   var lineSegment;
-
   var tooltip;
   var tooltipObject;
   var font;
@@ -439,10 +415,7 @@
   var controlMode = '';
   var highlightMode = 'none';
 
-  var renderer = new THREE.WebGLRenderer({
-    canvas: canvas,
-    logarithmicDepthBuffer: true
-  });
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, logarithmicDepthBuffer: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.autoClear = true;
 
@@ -480,32 +453,23 @@
     }
   });
 
-  $("#render_radius").click(function (e) {
+  $("#render_radius").click(function () {
     renderRadius = $('input[name=render_radius]:checked', '#render_radius').val();
     updateobjectData();
   });
 
-  $('#control_mode').click(function (e) {
+  $('#control_mode').click(function () {
     controlMode = $('input[name=control_mode]:checked', '#control_mode').val();
     updateTarget();
   });
 
-  $("#highlight_mode").click(function (e) {
+  $("#highlight_mode").click(function () {
     highlightMode = $('input[name=highlight_mode]:checked', '#highlight_mode').val();
-    stars.forEach(function (starMesh) {
-      updateHighlight(starMesh);
-    });
-  });
-
-  $("#info").click(function (e) {
-    e.preventDefault();
+    stars.forEach(function (starMesh) { updateHighlight(starMesh); });
   });
 
   var HIGHLIGHT_MAP = new THREE.TextureLoader().load("images/highlight.png");
-  var SPRITE_MATERIAL = new THREE.SpriteMaterial({
-    map: HIGHLIGHT_MAP,
-    depthWrite: false
-  });
+  var SPRITE_MATERIAL = new THREE.SpriteMaterial({ map: HIGHLIGHT_MAP, depthWrite: false });
 
   function updateTarget(prevStarMesh) {
     var prevControlMode = controlMode;
@@ -520,20 +484,19 @@
           function () {
             if (isStar(currentObjectMesh)) currentSystem.populatePlanets();
             if (isStar(prevStarMesh)) {
-              prevStarMesh.objectData.nearbyObjectIDs.forEach(function (e) {
+              (prevStarMesh.objectData.nearbyObjectIDs || []).forEach(function (e) {
                 resetStarScale(starsByID[e]);
-              })
+              });
             }
-            if (!prevControlMode || prevControlMode == 'tween') controlMode = 'orbit';
-            else controlMode = prevControlMode;
+            controlMode = (!prevControlMode || prevControlMode == 'tween') ? 'orbit' : prevControlMode;
 
             orbitControls.orbit(
               absolutePosition(currentObjectMesh),
               currentObjectMesh.objectData.radius.value.quantity * 2
-            )
+            );
           }
-        )
-      }
+        );
+      };
     };
 
     if (isStar(currentObjectMesh)) {
@@ -543,18 +506,11 @@
     }
   }
 
-  function isStar(mesh) {
-    return mesh && mesh.objectData.type == "STAR";
-  }
+  function isStar(mesh) { return mesh && mesh.objectData.type == "STAR"; }
 
   var currentObjectPrimaryId = "";
   var currentObjectMesh;
   var currentSystem;
-
-  var infoWiki = $("#wiki_box");
-  infoWiki.click(function (e) {
-    window.open(infoWiki.attr('href'), '_blank');
-  });
 
   function reassignLabel(targetMesh) {
     if (!tooltipObject || tooltipObject.objectData.primaryId == targetMesh.objectData.primaryId) return;
@@ -588,7 +544,7 @@
     var label = targetMesh.objectData.properName || "Unnamed Star";
     var cacheKey = label + lineDistance;
 
-    var radiusQuantity = targetMesh.objectData.radius?.value?.quantity || 0.01;
+    var radiusQuantity = (targetMesh.objectData.radius && targetMesh.objectData.radius.value && targetMesh.objectData.radius.value.quantity) || 0.01;
 
     if (!labelCache[cacheKey]) {
       labelCache[cacheKey] = new TooltipMarker(label, prettyDistance(lineDistance), radiusQuantity);
@@ -628,15 +584,16 @@
   function updateobjectData() {
     var renderedStars = {};
     visibleStars.forEach(function (e) { renderedStars[e.objectData.primaryId] = true; });
+
     visibleStars = [];
     visibleStarsByName = {};
-
     var nameList = [];
 
     stars.forEach(function (starMesh) {
       var data = starMesh.objectData;
       var starID = data.primaryId;
       var commonName = data.properName || ("Star " + starID);
+
       nameList.push(commonName);
       visibleStarsByName[commonName] = starMesh;
 
@@ -663,10 +620,7 @@
       if (fallback) select(fallback);
     }
 
-    $("#jump_to_list").autocomplete({
-      source: nameList,
-      minLength: 4
-    });
+    $("#jump_to_list").autocomplete({ source: nameList, minLength: 4 });
   }
 
   function closestNonPrimaryObject(intersects, currentPrimary, currentStarPrimary) {
@@ -683,6 +637,7 @@
     var lookPoint = camera.position;
     var min = Number.MAX_VALUE;
     var best = null;
+
     intersects.forEach(function (e) {
       var screenDistance = e.object.position.distanceTo(e.point) / lookPoint.distanceTo(e.point);
       var intersectId = e.object.objectData.primaryId;
@@ -703,7 +658,6 @@
 
       intersectCamera.position.copy(camera.position);
       intersectCamera.rotation.copy(camera.rotation);
-
       raycaster.setFromCamera(mouse, intersectCamera);
 
       if (currentSystem) {
@@ -747,12 +701,8 @@
   function getMouseoverStar() {
     if (!freeLookControls.dragView && consumeMouseMove()) {
       var object = getStarForPoint(mouseX, mouseY);
-      if (object) {
-        reassignLabel(object);
-        canvas.style.cursor = 'pointer';
-      } else {
-        canvas.style.cursor = 'auto';
-      }
+      canvas.style.cursor = object ? 'pointer' : 'auto';
+      if (object) reassignLabel(object);
     }
   }
 
@@ -768,7 +718,7 @@
 
   function initializeobjectData() {
     starData.forEach(function (star) {
-      var tempQ = star.temperatureEstimate?.value?.quantity || 5000;
+      var tempQ = (star.temperatureEstimate && star.temperatureEstimate.value && star.temperatureEstimate.value.quantity) || 5000;
 
       var shaderSurround = new THREE.ShaderMaterial({
         vertexShader: shaders.coronaVertexShader,
@@ -828,7 +778,7 @@
     var newTarget = mesh.objectData;
 
     if (isStar(mesh)) {
-      var offset = mesh.objectData.cartesianCoordsInLys || { x: 0, y: 0, z: 0 };
+      var offset = mesh.objectData.cartesianCoordsInLys || { x:0, y:0, z:0 };
       stars.forEach(function (e) {
         if (e.objectData.cartesianCoordsInLys) setOffset(e.objectData.cartesianCoordsInLys, e.position, offset);
       });
@@ -849,7 +799,7 @@
           .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Characteristics')))
           .append(row("Radius", getValue(newTarget, 'radius')));
 
-        if (newTarget.type == "STAR") {
+        if (newTarget.type == "STAR" || newTarget.type == "VIRTUAL_STAR") {
           infoTable
             .append(row("Class", newTarget.rawStellarClassification || "Unknown"))
             .append(row("Temperature", getValue(newTarget, 'temperatureEstimate') || "N/A"))
@@ -860,11 +810,11 @@
             .append(row("", ""))
             .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Identifiers')))
             .append(row("Proper Name", newTarget.properName || "Unnamed Star"))
-            .append(row("Hipparcos", newTarget.identifiers?.hipparcosId || "Unknown"))
-            .append(row("Henry Draper", newTarget.identifiers?.henryDraperId || "Unknown"))
-            .append(row("Harvard Revised", newTarget.identifiers?.harvardRevised || "Unknown"))
-            .append(row("Gliese", newTarget.identifiers?.glieseId || "Unknown"))
-            .append(row("Bayer Flamsteed", bfName(newTarget.identifiers?.bayerFlamsteed) || "Unknown"));
+            .append(row("Hipparcos", (newTarget.identifiers && newTarget.identifiers.hipparcosId) || "Unknown"))
+            .append(row("Henry Draper", (newTarget.identifiers && newTarget.identifiers.henryDraperId) || "Unknown"))
+            .append(row("Harvard Revised", (newTarget.identifiers && newTarget.identifiers.harvardRevised) || "Unknown"))
+            .append(row("Gliese", (newTarget.identifiers && newTarget.identifiers.glieseId) || "Unknown"))
+            .append(row("Bayer Flamsteed", bfName(newTarget.identifiers && newTarget.identifiers.bayerFlamsteed) || "Unknown"));
         } else {
           infoTable
             .append(row("Mass", getValue(newTarget, 'massKg') || "Unknown"))
@@ -951,18 +901,10 @@
     if (objValue.unit == 'NONE') return quantity;
   }
 
-  function prettyDensity(gPerCc) {
-    return gPerCc.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' g/cc';
-  }
-  function prettyTemperature(k) {
-    return k.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'K';
-  }
-  function prettyMagnitude(mv) {
-    return mv.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'Mv';
-  }
-  function prettyDegree(degrees) {
-    return degrees.toLocaleString('en-US', {maximumSignificantDigits: 3}) + '°';
-  }
+  function prettyDensity(gPerCc) { return gPerCc.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' g/cc'; }
+  function prettyTemperature(k) { return k.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'K'; }
+  function prettyMagnitude(mv) { return mv.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'Mv'; }
+  function prettyDegree(degrees) { return degrees.toLocaleString('en-US', {maximumSignificantDigits: 3}) + '°'; }
   function prettyMass(mass, qualifier) {
     var str = (mass / 5.9722e24).toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' M⊕';
     if (qualifier == 'Msini') str += " (Msini)";
@@ -985,10 +927,7 @@
     render();
   }
 
-  function animate() {
-    render();
-    requestAnimationFrame(animate);
-  }
+  function animate() { render(); requestAnimationFrame(animate); }
 
   function render() {
     var delta = clock.getDelta();
@@ -999,7 +938,6 @@
     else if (controlMode == 'tween') tweenControls.update(delta);
 
     getMouseoverStar();
-
     if (tooltip) tooltip.updateTo(camera);
 
     selector.updateTo(camera, delta);
@@ -1042,7 +980,6 @@
   }
 
   canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); }, false);
-
   canvas.addEventListener('mousemove', bind(orbitControls.onMouseMove, freeLookControls.onMouseMove), false);
   canvas.addEventListener('mousedown', bind(orbitControls.onMouseDown, freeLookControls.onMouseDown), false);
   canvas.addEventListener('mousewheel', bind(orbitControls.onMouseWheel, freeLookControls.onMouseWheel), false);
@@ -1060,10 +997,7 @@
 
   var mouseDownX = 0;
   var mouseDownY = 0;
-  function setmouseDown(event) {
-    mouseDownX = event.clientX;
-    mouseDownY = event.clientY;
-  }
+  function setmouseDown(event) { mouseDownX = event.clientX; mouseDownY = event.clientY; }
 
   window.addEventListener('resize', onWindowResize, false);
   canvas.addEventListener('mousemove', setMouseXY, false);
@@ -1072,7 +1006,7 @@
 
   var loader = new THREE.FontLoader();
 
-  // ========= Catalog helpers (NO caching at all) =========
+  // ========= Catalog helpers (NO caching) =========
   const catalogStatusEl  = document.getElementById("catalogStatus");
   const loadCatalogBtn   = document.getElementById("loadCatalogBtn");
   const clearCatalogBtn  = document.getElementById("clearCatalogBtn");
@@ -1100,19 +1034,17 @@
     return b.toFixed(digits) + units[i];
   }
 
-function renameSolIfCustom(catalogObj) {
-  if (!catalogObj || !Array.isArray(catalogObj.stars)) return catalogObj;
+  function renameSolIfCustom(catalogObj) {
+    if (!catalogObj || !Array.isArray(catalogObj.stars)) return catalogObj;
+    const rand = Math.floor(Math.random() * 900000) + 100000;
+    catalogObj.stars.forEach(function(s){
+      if (String(s.primaryId) === "1") {
+        s.properName = "Virtual Sol Outpost " + rand;
+      }
+    });
+    return catalogObj;
+  }
 
-  const rand = Math.floor(Math.random() * 900000) + 100000; // 6-digit
-  catalogObj.stars.forEach(s => {
-    if (String(s.primaryId) === "1") {
-      s.properName = `Virtual Sol Outpost ${rand}`;
-    }
-  });
-
-  return catalogObj;
-}
-  
   function resetCatalogScene() {
     try { if (tooltip) { scene.remove(tooltip.object); tooltip = null; } } catch(e){}
     try { if (lineSegment) { scene.remove(lineSegment); lineSegment = null; } } catch(e){}
@@ -1180,10 +1112,12 @@ function renameSolIfCustom(catalogObj) {
     initializeobjectData();
     updateobjectData();
 
-    catalogStatusEl.style.color = "#8f8";
-    catalogStatusEl.textContent =
-      "Loaded catalog (" + starData.length + " stars, " + planetData.length + " planets)." +
-      (isCustom ? " (custom)" : "");
+    if (catalogStatusEl) {
+      catalogStatusEl.style.color = "#8f8";
+      catalogStatusEl.textContent =
+        "Loaded catalog (" + starData.length + " stars, " + planetData.length + " planets)." +
+        (isCustom ? " (custom)" : "");
+    }
   }
 
   function cacheBust(url) {
@@ -1191,52 +1125,45 @@ function renameSolIfCustom(catalogObj) {
     return url + (url.indexOf("?") === -1 ? "?" : "&") + "ts=" + ts;
   }
 
-function loadCatalogFromURL(url, isCustom) {
-  if (catalogStatusEl) {
-    catalogStatusEl.style.color = "#ffb";
-    catalogStatusEl.textContent = "Loading catalog...";
-  }
+  function loadCatalogFromURL(url, isCustom) {
+    if (catalogStatusEl) {
+      catalogStatusEl.style.color = "#ffb";
+      catalogStatusEl.textContent = "Loading catalog...";
+    }
 
-  return $.ajax({
-    type: "GET",
-    dataType: "text",
-    cache: false,
-    url: cacheBust(url),
-    headers: { "Cache-Control": "no-store" },
-    success: function (data) {
-      try {
-        // 1) parse raw JSON
-        var obj = JSON.parse(data);
+    return $.ajax({
+      type: "GET",
+      dataType: "text",
+      cache: false,
+      url: cacheBust(url),
+      success: function (data) {
+        try {
+          var obj = JSON.parse(data);
 
-        // 2) ONLY for custom starmaps, rename Sol
-        if (isCustom) obj = renameSolIfCustom(obj);
+          if (isCustom) obj = renameSolIfCustom(obj);
 
-        // 3) validate/fill defaults
-        var parsed = validateCatalogObject(obj);
+          var parsed = validateCatalogObject(obj);
+          applyCatalogObject(parsed, !!isCustom);
 
-        // 4) apply to scene
-        applyCatalogObject(parsed, !!isCustom);
-
-        if (!isCustom && catalogStatusEl && mapAlive) {
-          catalogStatusEl.style.color = "#cfcfcf";
-          catalogStatusEl.textContent = "Using server catalog.";
+          if (!isCustom && catalogStatusEl && mapAlive) {
+            catalogStatusEl.style.color = "#cfcfcf";
+            catalogStatusEl.textContent = "Using server catalog.";
+          }
+        } catch (e) {
+          if (catalogStatusEl) {
+            catalogStatusEl.style.color = "#f88";
+            catalogStatusEl.textContent = "Invalid catalog JSON.";
+          }
         }
-      } catch (e) {
+      },
+      error: function () {
         if (catalogStatusEl) {
           catalogStatusEl.style.color = "#f88";
-          catalogStatusEl.textContent = "Invalid catalog JSON.";
+          catalogStatusEl.textContent = "Catalog failed to load.";
         }
       }
-    },
-    error: function () {
-      if (catalogStatusEl) {
-        catalogStatusEl.style.color = "#f88";
-        catalogStatusEl.textContent = "Catalog failed to load.";
-      }
-    }
-  });
-}
-
+    });
+  }
 
   // File picker
   if (loadCatalogBtn && catalogFileInput) {
@@ -1253,14 +1180,10 @@ function loadCatalogFromURL(url, isCustom) {
       reader.onload = function() {
         try {
           var raw = reader.result;
-var obj = JSON.parse(raw);
-
-// file picker is always custom
-obj = renameSolIfCustom(obj);
-
-var parsed = validateCatalogObject(obj);
-applyCatalogObject(parsed, true);
-
+          var obj = JSON.parse(raw);
+          obj = renameSolIfCustom(obj); // file picker is always custom
+          var parsed = validateCatalogObject(obj);
+          applyCatalogObject(parsed, true);
         } catch(e) {
           if (catalogStatusEl) {
             catalogStatusEl.style.color = "#f88";
@@ -1272,17 +1195,17 @@ applyCatalogObject(parsed, true);
     });
   }
 
-  // Reload default LOCAL catalog (no cache)
+  // Reload default LOCAL catalog
   if (clearCatalogBtn) {
-    clearCatalogBtn.addEventListener("click", function() {
+    clearCatalogBtn.addEventListener("click", function () {
       if (history && history.replaceState) {
         history.replaceState(null, "", window.location.pathname + window.location.search);
       }
-      loadCatalogFromURL("star_catalog.txt", false);
+      loadCatalogFromURL(DEFAULT_CATALOG_URL, false);
     });
   }
 
-  // Starmap list with sizes
+  // Starmap list with sizes (tolerant)
   function refreshStarmapList() {
     if (!starmapListEl) return;
     starmapListEl.innerHTML = '<div style="color:#888;">Loading list...</div>';
@@ -1298,9 +1221,14 @@ applyCatalogObject(parsed, true);
         }
 
         items.forEach(function(it){
-          var url  = it.url;
-          var name = it.name || (url ? url.split("/").pop() : "unknown.txt");
-          var size = prettyBytes(it.size);
+          // support new {url,name,size} OR old "urlstring"
+          var url  = (typeof it === "string") ? it : it.url;
+          var name = (typeof it === "string")
+            ? (it.split("/").pop())
+            : (it.name || (url ? url.split("/").pop() : "unknown.txt"));
+          var size = (typeof it === "string") ? "" : prettyBytes(it.size);
+
+          if (!url) return;
 
           var row = document.createElement("div");
           row.className = "starmap-item";
@@ -1322,11 +1250,11 @@ applyCatalogObject(parsed, true);
       });
   }
 
-  // ======= STARTUP: default local load, optional hash load, and no caching =======
+  // ======= STARTUP: local default, hash overrides =======
   function loadInitialCatalog() {
     var hashURL = getHashCatalogURL();
     if (hashURL) return loadCatalogFromURL(hashURL, true);
-    return loadCatalogFromURL("star_catalog.txt", false);
+    return loadCatalogFromURL(DEFAULT_CATALOG_URL, false);
   }
 
   $.when(
@@ -1342,6 +1270,13 @@ applyCatalogObject(parsed, true);
       mapAlive = true;
       refreshStarmapList();
     });
+  });
+
+  // ======= HASHCHANGE: load without full reload =======
+  window.addEventListener("hashchange", function() {
+    var hashURL = getHashCatalogURL();
+    if (hashURL) loadCatalogFromURL(hashURL, true);
+    else loadCatalogFromURL(DEFAULT_CATALOG_URL, false);
   });
 
   // Auto Explore
@@ -1361,7 +1296,7 @@ applyCatalogObject(parsed, true);
   }
 
   function startAutoExplore() {
-    autoExploreInterval = setInterval(() => {
+    autoExploreInterval = setInterval(function(){
       const randomStar = getRandomVisibleStar();
       if (randomStar) select(randomStar);
     }, getRandomInterval(7000, 13000));
