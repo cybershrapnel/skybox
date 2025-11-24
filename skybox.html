@@ -40,6 +40,25 @@
       font-size: 12px;
       cursor: pointer;
     }
+    #starmapListContainer {
+      margin-top: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      background: rgba(0,0,0,0.35);
+      padding: 6px;
+      font-size: 12px;
+    }
+    .starmap-item {
+      padding: 6px 8px;
+      margin: 2px 0;
+      cursor: pointer;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+    }
+    .starmap-item:hover {
+      background: rgba(255,255,255,0.12);
+    }
   </style>
 </head>
 
@@ -86,9 +105,16 @@
     <div class="overlay-panel">
       <div class="ui-widget">
         <button id="loadCatalogBtn" class="catalog-btn">Load Local star_catalog.txt</button>
-        <button id="clearCatalogBtn" class="catalog-btn">Clear Local Catalog</button>
+        <button id="clearCatalogBtn" class="catalog-btn">Reload Default Server Catalog</button>
         <input id="catalogFileInput" type="file" accept=".txt,.json,application/json,text/plain" style="display:none;">
         <div id="catalogStatus">Using server catalog.</div>
+
+        <div id="starmapListContainer">
+          <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Available starmaps:</div>
+          <div id="starmapList">
+            <div style="color:#888;">List will load after map starts…</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -156,6 +182,16 @@
             </form>
           </td>
         </tr>
+
+        <tr class="header-row overlay-header">
+          <td><b>Menu</b></td>
+        </tr>
+        <tr class="child-row">
+          <td>
+            <button id="collapseMenuBtn" class="catalog-btn">Collapse menu</button>
+          </td>
+        </tr>
+
         </tbody>
       </table>
     </div>
@@ -163,7 +199,7 @@
 
   <div id="attribution-overlay">
     <span id="page-counter"></span><br />
-    <a href="http://nanocheeze.com">NanoCheeZe.com</a><br />
+    <a href="https://mequavis.com">MEQUAVIS.COM</a><br />
   </div>
 
   <canvas id='webgl_canvas'></canvas>
@@ -280,10 +316,49 @@
 
 <script>
   $(function () {
+    // Catalog tab open on start (index 4)
     $("#selector").accordion({
       collapsible: true,
       animate: 100,
-      heightStyle: 'panel'
+      heightStyle: 'panel',
+      active: 4
+    });
+
+    // Collapse menu behavior
+    let menuCollapsed = false;
+
+    function collapseMenu() {
+      const $acc = $("#selector");
+      const $headers = $acc.children("h3");
+      const $panels = $headers.next();
+
+      $acc.accordion("option", "active", false);
+
+      $headers.not(":first").hide();
+      $panels.not(":first").hide();
+
+      menuCollapsed = true;
+    }
+
+    function restoreMenu() {
+      const $acc = $("#selector");
+      const $headers = $acc.children("h3");
+      const $panels = $headers.next();
+
+      $headers.show();
+      $panels.show();
+
+      menuCollapsed = false;
+      $acc.accordion("refresh");
+    }
+
+    $("#collapseMenuBtn").on("click", function(e){
+      e.preventDefault();
+      if (!menuCollapsed) collapseMenu();
+    });
+
+    $("#selector").children("h3").first().on("click", function(){
+      if (menuCollapsed) restoreMenu();
     });
   });
 
@@ -598,20 +673,14 @@
   }
 
   function closestNonPrimaryObject(intersects, currentPrimary, currentStarPrimary) {
-    if (intersects.length == 0) {
-      return null;
-    }
+    if (intersects.length == 0) return null;
 
     var firstIntersect = intersects[0].object;
     var firstIntersectId = firstIntersect.objectData.primaryId;
 
     if (intersects.length == 1 && currentPrimary) {
-      if (firstIntersectId == currentStarPrimary) {
-        return firstIntersect;
-      }
-      if (firstIntersectId != currentPrimary) {
-        return firstIntersect;
-      }
+      if (firstIntersectId == currentStarPrimary) return firstIntersect;
+      if (firstIntersectId != currentPrimary) return firstIntersect;
     }
 
     var lookPoint = camera.position;
@@ -621,9 +690,7 @@
       var screenDistance = e.object.position.distanceTo(e.point) / lookPoint.distanceTo(e.point);
       var intersectId = e.object.objectData.primaryId;
 
-      if (screenDistance < min
-          && intersectId != currentPrimary
-          && intersectId != currentStarPrimary) {
+      if (screenDistance < min && intersectId != currentPrimary && intersectId != currentStarPrimary) {
         best = e.object;
         min = screenDistance;
       }
@@ -648,9 +715,7 @@
           currentObjectPrimaryId,
           currentSystem.star.objectData.primaryId
         );
-        if (last) {
-          return currentSystem.objectsByID[last.objectData.primaryId];
-        }
+        if (last) return currentSystem.objectsByID[last.objectData.primaryId];
       }
 
       var allStars = visibleStars.concat(virtualStars);
@@ -660,15 +725,11 @@
         null
       );
 
-      if (lastStar) {
-        return lastStar;
-      }
+      if (lastStar) return lastStar;
 
       if (tooltip) {
         var text = raycaster.intersectObjects(tooltip.scaleObj.children, false);
-        if (text.length > 0) {
-          return tooltipObject;
-        }
+        if (text.length > 0) return tooltipObject;
       }
     }
     return null;
@@ -681,9 +742,7 @@
   }
 
   function consumeMouseMove() {
-    if (!mouseMoved) {
-      return false
-    }
+    if (!mouseMoved) return false;
     mouseMoved = false;
     return true;
   }
@@ -691,7 +750,6 @@
   function getMouseoverStar() {
     if (!freeLookControls.dragView && consumeMouseMove()) {
       var object = getStarForPoint(mouseX, mouseY);
-
       if (object) {
         reassignLabel(object);
         canvas.style.cursor = 'pointer';
@@ -708,9 +766,7 @@
 
     if (delta < 5) {
       const clickedStar = getStarForPoint(event.clientX, event.clientY);
-      if (clickedStar) {
-        select(clickedStar);
-      }
+      if (clickedStar) select(clickedStar);
     }
   }
 
@@ -755,10 +811,7 @@
   }
 
   function setOffset(raw, current, offset) {
-    if (!raw || !offset || !current) {
-      console.warn("Missing data in setOffset:", { raw, current, offset });
-      return;
-    }
+    if (!raw || !offset || !current) return;
     current.x = raw.x - offset.x;
     current.y = raw.y - offset.y;
     current.z = raw.z - offset.z;
@@ -767,82 +820,76 @@
   function currentOffset(position) {
     var pos = new THREE.Vector3();
     pos.add(position);
-    if (currentSystem) {
-      pos.add(currentSystem.star.objectData.cartesianCoordsInLys);
-    }
+    if (currentSystem) pos.add(currentSystem.star.objectData.cartesianCoordsInLys);
     return pos;
   }
 
   function select(mesh) {
-    if (mesh) {
-      var newTarget = mesh.objectData;
+    if (!mesh) return;
 
-      if (isStar(mesh)) {
-        var offset = mesh.objectData.cartesianCoordsInLys || { x: 0, y: 0, z: 0 };
-        stars.forEach(function (e) {
-          if (e.objectData.cartesianCoordsInLys) {
-            setOffset(e.objectData.cartesianCoordsInLys, e.position, offset);
-          }
-        });
-        setOffset(currentOffset(camera.position), camera.position, offset);
-        setOffset(ZERO, solMarker.mesh.position, offset);
-      }
+    var newTarget = mesh.objectData;
 
-      if (newTarget != null) {
-        var newTargetPrimaryId = newTarget.primaryId;
+    if (isStar(mesh)) {
+      var offset = mesh.objectData.cartesianCoordsInLys || { x: 0, y: 0, z: 0 };
+      stars.forEach(function (e) {
+        if (e.objectData.cartesianCoordsInLys) setOffset(e.objectData.cartesianCoordsInLys, e.position, offset);
+      });
+      setOffset(currentOffset(camera.position), camera.position, offset);
+      setOffset(ZERO, solMarker.mesh.position, offset);
+    }
 
-        if (newTargetPrimaryId != currentObjectPrimaryId) {
-          $('#info-header').text(newTarget.properName);
+    if (newTarget != null) {
+      var newTargetPrimaryId = newTarget.primaryId;
 
-          var infoTable = $('#info-table');
-          infoTable.empty();
+      if (newTargetPrimaryId != currentObjectPrimaryId) {
+        $('#info-header').text(newTarget.properName);
 
+        var infoTable = $('#info-table');
+        infoTable.empty();
+
+        infoTable
+            .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Characteristics')))
+            .append(row("Radius", getValue(newTarget, 'radius')));
+
+        if (newTarget.type == "STAR") {
           infoTable
-              .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Characteristics')))
-              .append(row("Radius", getValue(newTarget, 'radius')));
-
-          if (newTarget.type == "STAR") {
-            infoTable
-                .append(row("Class", newTarget.rawStellarClassification || "Unknown"))
-                .append(row("Temperature", getValue(newTarget, 'temperatureEstimate') || "N/A"))
-                .append(row("Distance (Sol)", getValue(newTarget, 'solDistance') || "Unknown"))
-                .append(row("Right ascension", getValue(newTarget, 'rightAscensionRadians') || "Unknown"))
-                .append(row("Declination", getValue(newTarget, 'declinationRadians') || "Unknown"))
-                .append(row("Abs Magnitude", getValue(newTarget, 'absoluteMagnitude') || "Unknown"))
-                .append(row("", ""))
-                .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Identifiers')))
-                .append(row("Proper Name", newTarget.properName || "Unnamed Star"))
-                .append(row("Hipparcos", newTarget.identifiers?.hipparcosId || "Unknown"))
-                .append(row("Henry Draper", newTarget.identifiers?.henryDraperId || "Unknown"))
-                .append(row("Harvard Revised", newTarget.identifiers?.harvardRevised || "Unknown"))
-                .append(row("Gliese", newTarget.identifiers?.glieseId || "Unknown"))
-                .append(row("Bayer Flamsteed", bfName(newTarget.identifiers?.bayerFlamsteed) || "Unknown"));
-          } else {
-            infoTable
-                .append(row("Mass", getValue(newTarget, 'massKg') || "Unknown"))
-                .append(row("Density", getValue(newTarget, 'densityGcc') || "Unknown"))
-                .append(row("Orbital Period", getValue(newTarget, 'orbitalPeriodDays') || "Unknown"))
-                .append(row("Semi-Major axis", getValue(newTarget, 'semiMajorAxisLys') || "Unknown"))
-                .append(row("Semi-Minor axis", getValue(newTarget, 'semiMinorAxisLys') || "Unknown"))
-                .append(row("Inclination", getValue(newTarget, 'inclination') || "Unknown"))
-                .append(row("Lon asc node", getValue(newTarget, 'longAscendingNode') || "Unknown"))
-                .append(row("Arg periapsis", getValue(newTarget, 'argumentPeriapsis') || "Unknown"));
-          }
-
-          var prevTargetMesh = currentObjectMesh;
-          updateCurrentTargets(mesh);
-          updateTarget(prevTargetMesh);
-          doReassign(currentObjectMesh);
+              .append(row("Class", newTarget.rawStellarClassification || "Unknown"))
+              .append(row("Temperature", getValue(newTarget, 'temperatureEstimate') || "N/A"))
+              .append(row("Distance (Sol)", getValue(newTarget, 'solDistance') || "Unknown"))
+              .append(row("Right ascension", getValue(newTarget, 'rightAscensionRadians') || "Unknown"))
+              .append(row("Declination", getValue(newTarget, 'declinationRadians') || "Unknown"))
+              .append(row("Abs Magnitude", getValue(newTarget, 'absoluteMagnitude') || "Unknown"))
+              .append(row("", ""))
+              .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Identifiers')))
+              .append(row("Proper Name", newTarget.properName || "Unnamed Star"))
+              .append(row("Hipparcos", newTarget.identifiers?.hipparcosId || "Unknown"))
+              .append(row("Henry Draper", newTarget.identifiers?.henryDraperId || "Unknown"))
+              .append(row("Harvard Revised", newTarget.identifiers?.harvardRevised || "Unknown"))
+              .append(row("Gliese", newTarget.identifiers?.glieseId || "Unknown"))
+              .append(row("Bayer Flamsteed", bfName(newTarget.identifiers?.bayerFlamsteed) || "Unknown"));
+        } else {
+          infoTable
+              .append(row("Mass", getValue(newTarget, 'massKg') || "Unknown"))
+              .append(row("Density", getValue(newTarget, 'densityGcc') || "Unknown"))
+              .append(row("Orbital Period", getValue(newTarget, 'orbitalPeriodDays') || "Unknown"))
+              .append(row("Semi-Major axis", getValue(newTarget, 'semiMajorAxisLys') || "Unknown"))
+              .append(row("Semi-Minor axis", getValue(newTarget, 'semiMinorAxisLys') || "Unknown"))
+              .append(row("Inclination", getValue(newTarget, 'inclination') || "Unknown"))
+              .append(row("Lon asc node", getValue(newTarget, 'longAscendingNode') || "Unknown"))
+              .append(row("Arg periapsis", getValue(newTarget, 'argumentPeriapsis') || "Unknown"));
         }
+
+        var prevTargetMesh = currentObjectMesh;
+        updateCurrentTargets(mesh);
+        updateTarget(prevTargetMesh);
+        doReassign(currentObjectMesh);
       }
     }
   }
 
   function bfName(bayerFlamsteed) {
-    if (bayerFlamsteed) {
-      return bayerFlamsteed.prettyName;
-    }
-    return ""
+    if (bayerFlamsteed) return bayerFlamsteed.prettyName;
+    return "";
   }
 
   function isSol(mesh) {
@@ -854,9 +901,7 @@
     currentObjectPrimaryId = mesh.objectData.primaryId;
 
     if (mesh.objectData.type == "STAR" || mesh.objectData.type == "VIRTUAL_STAR") {
-      if (currentSystem && currentSystem.star.objectData.primaryId == mesh.objectData.primaryId) {
-        return;
-      }
+      if (currentSystem && currentSystem.star.objectData.primaryId == mesh.objectData.primaryId) return;
 
       var prevSystem = currentSystem;
 
@@ -867,9 +912,7 @@
           solMarker.mesh.position
       );
 
-      if (isSol(mesh)) {
-        currentSystem.object.rotateY(23.5 * Math.PI / 180);
-      }
+      if (isSol(mesh)) currentSystem.object.rotateY(23.5 * Math.PI / 180);
 
       if (prevSystem) {
         updateHighlight(prevSystem.star);
@@ -884,20 +927,14 @@
   function row(name, value) {
     return $('<tr></tr>')
         .append($('<td></td>').text(name))
-        .append($('<td></td>').text(value).addClass('info-element'))
+        .append($('<td></td>').text(value).addClass('info-element'));
   }
 
   function getValue(data, element) {
     var elem = data[element];
-    if (!elem) {
-      return "Unknown";
-    }
-    if (!elem.source) {
-      return elem;
-    }
-    if (elem.source == "DEFAULT") {
-      return "?";
-    }
+    if (!elem) return "Unknown";
+    if (!elem.source) return elem;
+    if (elem.source == "DEFAULT") return "?";
     return formatObjValue(elem);
   }
 
@@ -905,32 +942,22 @@
     var objValue = elem.value;
     var quantity = objValue.quantity;
 
-    if (objValue.unit == 'LY') {
-      return prettyDistance(quantity);
-    } else if (objValue.unit == 'DAY') {
-      return quantity + ' days';
-    } else if (objValue.unit == 'KG') {
-      return prettyMass(quantity, elem.measurementQualifier);
-    } else if (objValue.unit == 'DEGREE_GEOM') {
-      return prettyDegree(quantity);
-    } else if (objValue.unit == 'RADIAN') {
-      return prettyDegree(quantity * 57.2958);
-    } else if (objValue.unit == 'MV') {
-      return prettyMagnitude(quantity);
-    } else if (objValue.unit == 'K') {
-      return prettyTemperature(quantity);
-    } else if (objValue.unit == 'G_PER_CC') {
-      return prettyDensity(quantity);
-    } else if (objValue.unit == 'NONE') {
-      return quantity;
-    }
+    if (objValue.unit == 'LY') return prettyDistance(quantity);
+    if (objValue.unit == 'DAY') return quantity + ' days';
+    if (objValue.unit == 'KG') return prettyMass(quantity, elem.measurementQualifier);
+    if (objValue.unit == 'DEGREE_GEOM') return prettyDegree(quantity);
+    if (objValue.unit == 'RADIAN') return prettyDegree(quantity * 57.2958);
+    if (objValue.unit == 'MV') return prettyMagnitude(quantity);
+    if (objValue.unit == 'K') return prettyTemperature(quantity);
+    if (objValue.unit == 'G_PER_CC') return prettyDensity(quantity);
+    if (objValue.unit == 'NONE') return quantity;
   }
 
   function prettyDensity(gPerCc) {
     return gPerCc.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' g/cc';
   }
   function prettyTemperature(k) {
-    return k.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'K'
+    return k.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'K';
   }
   function prettyMagnitude(mv) {
     return mv.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'Mv';
@@ -940,21 +967,15 @@
   }
   function prettyMass(mass, qualifier) {
     var str = (mass / 5.9722e24).toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' M⊕';
-    if (qualifier == 'Msini') {
-      str += " (Msini)"
-    }
+    if (qualifier == 'Msini') str += " (Msini)";
     return str;
   }
   function prettyDistance(lys) {
-    if (lys > .01) {
-      return lys.toFixed(2) + ' ly';
-    }
+    if (lys > .01) return lys.toFixed(2) + ' ly';
     var distKM = lys * 9.461e12;
     var distAU = distKM / 1.496e8;
-    if (distAU > .01) {
-      return distAU.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' AU';
-    }
-    return distKM.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' km'
+    if (distAU > .01) return distAU.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' AU';
+    return distKM.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' km';
   }
 
   function onWindowResize() {
@@ -975,19 +996,13 @@
     var delta = clock.getDelta();
     uniforms.time.value += 0.003 * delta;
 
-    if (controlMode == 'orbit') {
-      orbitControls.update(delta);
-    } else if (controlMode == 'free') {
-      freeLookControls.update(delta);
-    } else if (controlMode == 'tween') {
-      tweenControls.update(delta);
-    }
+    if (controlMode == 'orbit') orbitControls.update(delta);
+    else if (controlMode == 'free') freeLookControls.update(delta);
+    else if (controlMode == 'tween') tweenControls.update(delta);
 
     getMouseoverStar();
 
-    if (tooltip) {
-      tooltip.updateTo(camera);
-    }
+    if (tooltip) tooltip.updateTo(camera);
 
     selector.updateTo(camera, delta);
     solMarker.updateTo(camera, delta);
@@ -1028,46 +1043,20 @@
     star.scale.set(scale, scale, scale);
   }
 
-  canvas.addEventListener('contextmenu', function (event) {
-    event.preventDefault();
-  }, false);
+  canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); }, false);
 
-  canvas.addEventListener('mousemove',
-      bind(orbitControls.onMouseMove, freeLookControls.onMouseMove),
-      false
-  );
-  canvas.addEventListener('mousedown',
-      bind(orbitControls.onMouseDown, freeLookControls.onMouseDown),
-      false
-  );
-  canvas.addEventListener('mousewheel',
-      bind(orbitControls.onMouseWheel, freeLookControls.onMouseWheel),
-      false
-  );
-  canvas.addEventListener('DOMMouseScroll',
-      bind(orbitControls.onMouseWheel, freeLookControls.onMouseWheel),
-      false
-  );
-  canvas.addEventListener('mouseup',
-      bind(orbitControls.onMouseUp, freeLookControls.onMouseUp),
-      false
-  );
-  canvas.addEventListener('keydown',
-      bind(orbitControls.onKeyDown, freeLookControls.onKeyDown),
-      false
-  );
-  canvas.addEventListener('keyup',
-      bind(orbitControls.onKeyUp, freeLookControls.onKeyUp),
-      false
-  );
+  canvas.addEventListener('mousemove', bind(orbitControls.onMouseMove, freeLookControls.onMouseMove), false);
+  canvas.addEventListener('mousedown', bind(orbitControls.onMouseDown, freeLookControls.onMouseDown), false);
+  canvas.addEventListener('mousewheel', bind(orbitControls.onMouseWheel, freeLookControls.onMouseWheel), false);
+  canvas.addEventListener('DOMMouseScroll', bind(orbitControls.onMouseWheel, freeLookControls.onMouseWheel), false);
+  canvas.addEventListener('mouseup', bind(orbitControls.onMouseUp, freeLookControls.onMouseUp), false);
+  canvas.addEventListener('keydown', bind(orbitControls.onKeyDown, freeLookControls.onKeyDown), false);
+  canvas.addEventListener('keyup', bind(orbitControls.onKeyUp, freeLookControls.onKeyUp), false);
 
   function bind(orbitFn, freeFn) {
     return function () {
-      if (controlMode === 'free') {
-        freeFn.apply(freeLookControls, arguments);
-      } else if (controlMode === 'orbit') {
-        orbitFn.apply(orbitControls, arguments);
-      }
+      if (controlMode === 'free') freeFn.apply(freeLookControls, arguments);
+      else if (controlMode === 'orbit') orbitFn.apply(orbitControls, arguments);
     };
   }
 
@@ -1085,36 +1074,29 @@
 
   var loader = new THREE.FontLoader();
 
-  // ========= NEW catalog loading helpers =========
+  // ========= catalog loading helpers =========
   const catalogStatusEl = document.getElementById("catalogStatus");
   const loadCatalogBtn = document.getElementById("loadCatalogBtn");
   const clearCatalogBtn = document.getElementById("clearCatalogBtn");
   const catalogFileInput = document.getElementById("catalogFileInput");
-  const MAX_LOCALSTORAGE_CHARS = 3.5 * 1024 * 1024; // ~3.5MB safe limit
+  const starmapListEl = document.getElementById("starmapList");
+  const MAX_LOCALSTORAGE_CHARS = 3.5 * 1024 * 1024;
 
-  // NEW: detect hash URL (index.html#https://example.com/star_catalog.txt)
+  // IMPORTANT: use HTTPS to avoid mixed content blocks
+  const STARMAP_INDEX_URL = "https://xtdevelopment.net/chat-proxy/starmaps/starmaps.php";
+
   function getHashCatalogURL() {
-    console.log("[hash] raw location.hash =", window.location.hash);
-
     if (!window.location.hash) return null;
     const raw = window.location.hash.substring(1).trim();
     if (!raw) return null;
-
     const decoded = decodeURIComponent(raw);
-    console.log("[hash] decoded =", decoded);
-
-    if (/^https?:\/\//i.test(decoded)) {
-      console.log("[hash] valid URL detected");
-      return decoded;
-    }
-    console.log("[hash] NOT a valid http(s) URL");
+    if (/^https?:\/\//i.test(decoded)) return decoded;
     return null;
   }
 
-  // NEW: rename Sol on custom loads
   function renameSolIfCustom(catalogObj) {
     if (!catalogObj || !Array.isArray(catalogObj.stars)) return catalogObj;
-    const rand = Math.floor(Math.random() * 900000) + 100000; // 6-digit
+    const rand = Math.floor(Math.random() * 900000) + 100000;
     catalogObj.stars.forEach(s => {
       if (String(s.primaryId) === "1") {
         s.properName = `Virtual Sol Outpost ${rand}`;
@@ -1124,11 +1106,8 @@
   }
 
   function resetCatalogScene() {
-    try {
-      if (tooltip) { scene.remove(tooltip.object); tooltip = null; }
-      if (lineSegment) { scene.remove(lineSegment); lineSegment = null; }
-    } catch(e){}
-
+    try { if (tooltip) { scene.remove(tooltip.object); tooltip = null; } } catch(e){}
+    try { if (lineSegment) { scene.remove(lineSegment); lineSegment = null; } } catch(e){}
     try { removeVirtualStars(); } catch(e){}
 
     if (currentSystem) {
@@ -1136,9 +1115,7 @@
       currentSystem = null;
     }
 
-    stars.forEach(function (s) {
-      try { scene.remove(s); } catch(e){}
-    });
+    stars.forEach(function (s) { try { scene.remove(s); } catch(e){} });
 
     stars = [];
     starsByID = {};
@@ -1149,13 +1126,10 @@
     currentObjectPrimaryId = "";
   }
 
-  // MOD: applyCatalogObject now takes isCustom
   function applyCatalogObject(dataParsed, isCustom) {
     resetCatalogScene();
 
-    if (isCustom) {
-      dataParsed = renameSolIfCustom(dataParsed);
-    }
+    if (isCustom) dataParsed = renameSolIfCustom(dataParsed);
 
     starData = Array.isArray(dataParsed.stars) ? dataParsed.stars : [];
     planetData = Array.isArray(dataParsed.planets) ? dataParsed.planets : [];
@@ -1200,56 +1174,53 @@
     return obj;
   }
 
+  function loadCatalogFromURL(url, isCustom) {
+    catalogStatusEl.style.color = "#ffb";
+    catalogStatusEl.textContent = "Loading catalog from URL...";
+
+    return $.ajax({
+      type: 'GET',
+      dataType: 'text',
+      url: url,
+      success: function (data) {
+        var dataParsed = validateCatalogObject(JSON.parse(data));
+        applyCatalogObject(dataParsed, !!isCustom);
+
+        if (isCustom) {
+          const raw = JSON.stringify(dataParsed);
+          if (raw.length <= MAX_LOCALSTORAGE_CHARS) {
+            try { localStorage.setItem("customStarCatalog", raw); } catch(e){}
+          }
+        }
+      },
+      error: function (xhr, status, err) {
+        console.warn("Catalog load failed:", err);
+        catalogStatusEl.style.color = "#f88";
+        catalogStatusEl.textContent = "Catalog URL failed to load.";
+      }
+    });
+  }
+
   loadCatalogBtn.addEventListener("click", function() {
     catalogFileInput.value = "";
     catalogFileInput.click();
   });
 
-  // ✅ FIXED CLEAR BUTTON: reloads default server catalog live
   clearCatalogBtn.addEventListener("click", function() {
-    // kill local custom cache
     localStorage.removeItem("customStarCatalog");
-
-    // kill hash custom URL so it doesn't override again
-    if (window.location.hash) {
-      history.replaceState(null, document.title,
-        window.location.pathname + window.location.search
-      );
+    if (history && history.replaceState) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
     }
 
     catalogStatusEl.style.color = "#ffb";
-    catalogStatusEl.textContent = "Reloading server catalog...";
+    catalogStatusEl.textContent = "Reloading default server catalog...";
 
-    $.ajax({
-      type: "GET",
-      dataType: "html",
-      url: "star_catalog.txt",
-      cache: false,
-      success: function(data) {
-        try {
-          var dataParsed = JSON.parse(data);
-          dataParsed = validateCatalogObject(dataParsed);
-
-          // apply as non-custom so Sol stays Sol
-          applyCatalogObject(dataParsed, false);
-
-          catalogStatusEl.style.color = "#cfcfcf";
-          catalogStatusEl.textContent = "Using server catalog.";
-        } catch(e) {
-          console.error(e);
-          catalogStatusEl.style.color = "#f88";
-          catalogStatusEl.textContent = "Server catalog invalid: " + e.message;
-        }
-      },
-      error: function(xhr, status, err) {
-        console.error("[catalog] server reload ERROR", { status, err, xhr });
-        catalogStatusEl.style.color = "#f88";
-        catalogStatusEl.textContent = "Failed to reload server catalog.";
-      }
+    loadCatalogFromURL("star_catalog.txt", false).then(() => {
+      catalogStatusEl.style.color = "#cfcfcf";
+      catalogStatusEl.textContent = "Using server catalog.";
     });
   });
 
-  // MOD: local file load counts as custom => rename Sol
   catalogFileInput.addEventListener("change", function(ev) {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
@@ -1261,11 +1232,7 @@
         const parsed = validateCatalogObject(JSON.parse(raw));
 
         if (raw.length <= MAX_LOCALSTORAGE_CHARS) {
-          try {
-            localStorage.setItem("customStarCatalog", JSON.stringify(parsed));
-          } catch(storageErr) {
-            console.warn("Catalog too large for localStorage, loading without caching.", storageErr);
-          }
+          try { localStorage.setItem("customStarCatalog", JSON.stringify(parsed)); } catch(e){}
         }
 
         applyCatalogObject(parsed, true);
@@ -1279,94 +1246,94 @@
     reader.readAsText(file);
   });
 
-  // MOD: hash URL takes top priority over cache/default
-  function loadInitialCatalogThenStart() {
-    const hashURL = getHashCatalogURL();
-    console.log("[catalog] hashURL =", hashURL);
-
-    if (hashURL) {
-      console.log("[catalog] attempting to fetch hash catalog:", hashURL);
-      catalogStatusEl.style.color = "#ffb";
-      catalogStatusEl.textContent = "Loading catalog from URL hash...";
-
-      return $.ajax({
-        type: 'GET',
-        dataType: 'text',
-        url: hashURL,
-        success: function (data) {
-          console.log("[catalog] hash fetch SUCCESS, bytes =", data.length);
-          var dataParsed = validateCatalogObject(JSON.parse(data));
-          dataParsed = renameSolIfCustom(dataParsed);
-          starData = dataParsed.stars;
-          planetData = dataParsed.planets;
-          console.log("[catalog] parsed stars =", starData.length, "planets =", planetData.length);
-          catalogStatusEl.style.color = "#8f8";
-          catalogStatusEl.textContent =
-            `Loaded hash catalog (${starData.length} stars, ${planetData.length} planets). (custom)`;
-        },
-        error: function (xhr, status, err) {
-          console.log("[catalog] hash fetch ERROR", { status, err, xhr });
-          console.warn("Hash catalog load failed, falling back to cache/default.", err);
-          catalogStatusEl.style.color = "#f88";
-          catalogStatusEl.textContent =
-            "Hash catalog failed to load. Falling back to local/default...";
-        }
-      }).then(null, function () {
-        console.log("[catalog] running fallback after hash failure");
-        return loadFallbackCatalog();
-      });
-    }
-
-    console.log("[catalog] no hash URL, using fallback");
-    return loadFallbackCatalog();
-  }
-
-  // NEW: previous cache/default logic moved here
   function loadFallbackCatalog() {
     const cached = localStorage.getItem("customStarCatalog");
     if (cached) {
       try {
         const parsed = validateCatalogObject(JSON.parse(cached));
-        const customParsed = renameSolIfCustom(parsed);
-        starData = customParsed.stars;
-        planetData = customParsed.planets;
-        catalogStatusEl.style.color = "#8f8";
-        catalogStatusEl.textContent =
-          `Loaded cached local catalog (${starData.length} stars). (custom)`;
+        applyCatalogObject(parsed, true);
         return $.Deferred().resolve().promise();
       } catch(e) {
-        console.warn("Cached catalog invalid, clearing.", e);
         localStorage.removeItem("customStarCatalog");
       }
     }
-
-    return $.ajax({
-      type: 'GET',
-      dataType: 'html',
-      url: "star_catalog.txt",
-      success: function (data) {
-        var dataParsed = JSON.parse(data);
-        dataParsed = validateCatalogObject(dataParsed);
-        starData = dataParsed.stars;
-        planetData = dataParsed.planets;
-        catalogStatusEl.style.color = "#cfcfcf";
-        catalogStatusEl.textContent = "Using server catalog.";
-      }
-    });
+    return loadCatalogFromURL("star_catalog.txt", false);
   }
-  // ========= END new catalog helpers =========
+
+  function loadInitialCatalogThenStart() {
+    const hashURL = getHashCatalogURL();
+    if (hashURL) {
+      return loadCatalogFromURL(hashURL, true).then(null, function() {
+        return loadFallbackCatalog();
+      });
+    }
+    return loadFallbackCatalog();
+  }
+
+  // ======= FIXED starmap list fetch: async, timeout, tolerant parsing =======
+  function refreshStarmapList() {
+    starmapListEl.innerHTML = `<div style="color:#888;">Loading list...</div>`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5s hard stop
+
+    fetch(STARMAP_INDEX_URL, { signal: controller.signal })
+      .then(async r => {
+        clearTimeout(timeout);
+        const text = await r.text();
+
+        // try JSON parse first
+        let urls = null;
+        try {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) urls = parsed;
+          else if (parsed && Array.isArray(parsed.urls)) urls = parsed.urls;
+        } catch(e){
+          // not JSON, fall through
+        }
+
+        // fallback: line-separated list
+        if (!urls) {
+          urls = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        }
+
+        starmapListEl.innerHTML = "";
+        if (!urls || urls.length === 0) {
+          starmapListEl.innerHTML = `<div style="color:#888;">No starmaps found.</div>`;
+          return;
+        }
+
+        urls.forEach(url => {
+          const name = url.split("/").pop();
+          const item = document.createElement("div");
+          item.className = "starmap-item";
+          item.textContent = name;
+          item.dataset.url = url;
+          item.onclick = () => loadCatalogFromURL(url, true);
+          starmapListEl.appendChild(item);
+        });
+      })
+      .catch(err => {
+        clearTimeout(timeout);
+        console.warn("Failed to load starmap list:", err);
+        starmapListEl.innerHTML = `<div style="color:#f88;">Failed to load list.</div>`;
+      });
+  }
+  // ======= end list fetch fix =======
 
   $.when(
       loadInitialCatalogThenStart(),
       shaders.loaders()
   ).then(function () {
     loader.load('js/font.js', function (response) {
-          font = response;
-          initializeobjectData();
-          animate();
-          updateobjectData();
-        }
-    );
+      font = response;
+      initializeobjectData();
+      animate();
+      updateobjectData();
+
+      // IMPORTANT: don't start list fetch until map is alive
+      setTimeout(refreshStarmapList, 0);
+    });
   });
 
   // Auto Explore
@@ -1388,9 +1355,7 @@
   function startAutoExplore() {
     autoExploreInterval = setInterval(() => {
       const randomStar = getRandomVisibleStar();
-      if (randomStar) {
-        select(randomStar);
-      }
+      if (randomStar) select(randomStar);
     }, getRandomInterval(7000, 13000));
   }
 
