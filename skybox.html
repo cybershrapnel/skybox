@@ -348,6 +348,9 @@
           <div class="stat-row"><span class="stat-label">Stars visible (range)</span><span class="stat-value" id="statStarsVisible">0</span></div>
           <div class="stat-row"><span class="stat-label">Planets visible (range)</span><span class="stat-value" id="statPlanetsVisible">0</span></div>
           <div class="stat-row"><span class="stat-label">Virtual stars loaded</span><span class="stat-value" id="statVirtualStarsLoaded">0</span></div>
+            <!-- ✅ NEW travel stats -->
+  <div class="stat-row"><span class="stat-label">Total distance traveled</span><span class="stat-value" id="statTotalDistanceLy">0.000 ly</span></div>
+  <div class="stat-row"><span class="stat-label">Avg distance per hour</span><span class="stat-value" id="statAvgLyPerHour">0.000 ly/h</span></div>
         </div>
       </div>
     </div>
@@ -841,6 +844,10 @@
   var visibleStars = [];
   var visibleStarsByName = {};
   var renderRadius = 75;
+// ✅ Travel stats
+var totalTravelDistanceLy = 0;
+var travelStartMs = performance.now();
+var lastTravelStatsUpdateMs = 0;
 
   // track last selected raw coords for stable offsets when no System is active (virtual stars)
   var lastSelectedStarRaw = { x:0, y:0, z:0 };
@@ -1454,6 +1461,18 @@
   const statStarsVisibleEl  = document.getElementById("statStarsVisible");
   const statPlanetsVisibleEl= document.getElementById("statPlanetsVisible");
   const statVirtualStarsLoadedEl = document.getElementById("statVirtualStarsLoaded");
+// ✅ NEW stat elements
+const statTotalDistanceLyEl = document.getElementById("statTotalDistanceLy");
+const statAvgLyPerHourEl    = document.getElementById("statAvgLyPerHour");
+
+
+  function updateTravelStats() {
+  const elapsedHours = (performance.now() - travelStartMs) / 3600000;
+  const avg = elapsedHours > 0.000001 ? (totalTravelDistanceLy / elapsedHours) : 0;
+
+  if (statTotalDistanceLyEl) statTotalDistanceLyEl.textContent = prettyLy(totalTravelDistanceLy);
+  if (statAvgLyPerHourEl) statAvgLyPerHourEl.textContent = avg.toFixed(3) + " ly/h";
+}
 
 function updateCatalogStats() {
   const starsLoaded = (starData && starData.length) ? starData.length : 0;
@@ -1478,6 +1497,11 @@ function updateCatalogStats() {
   if (statPlanetsLoadedEl) statPlanetsLoadedEl.textContent = String(planetsLoaded);
   if (statStarsVisibleEl) statStarsVisibleEl.textContent = String(starsVisible);
   if (statPlanetsVisibleEl) statPlanetsVisibleEl.textContent = String(planetsVisible);
+
+    // ✅ Travel stats
+  updateTravelStats();
+
+  
 }
 
 
@@ -1485,6 +1509,22 @@ function updateCatalogStats() {
     if (!mesh) return;
     opts = opts || {};
     const driftMode = !!opts.driftMode;
+
+      // ✅ Travel accumulation (star → star only)
+  if (mesh && currentObjectMesh && isStar(mesh) && isStar(currentObjectMesh)) {
+    const prevRaw = getRawOf(currentObjectMesh);
+    const newRaw  = getRawOf(mesh);
+
+    const dx = newRaw.x - prevRaw.x;
+    const dy = newRaw.y - prevRaw.y;
+    const dz = newRaw.z - prevRaw.z;
+
+    const legDist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if (isFinite(legDist) && legDist > 0) {
+      totalTravelDistanceLy += legDist;
+    }
+  }
+
 
     var newTarget = mesh.objectData;
 
@@ -1704,6 +1744,13 @@ function updateCatalogStats() {
       }
     }
     maybeDrawMinimap(); // ✅ keep minimap fresh when open
+    
+    // ✅ keep avg travel stat live even if idle
+    const nowMs = performance.now();
+    if (nowMs - lastTravelStatsUpdateMs > 500) {
+      lastTravelStatsUpdateMs = nowMs;
+      updateTravelStats();
+    }
 
     renderer.render(scene, camera);
   }
