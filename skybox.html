@@ -74,6 +74,155 @@
       font-size:11px;
       white-space:nowrap;
     }
+
+    /* ============================
+       LOS (Line-of-sight) panel
+       ============================ */
+    #losContainer {
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+    }
+    #losHeader {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #9fd0ff;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    #losList {
+      max-height: 140px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .los-item {
+      padding: 4px 6px;
+      margin: 2px 0;
+      cursor: pointer;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .los-item:hover {
+      background: rgba(120,170,255,0.18);
+    }
+    .los-name {
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      flex:1;
+    }
+    .los-dist {
+      font-size: 11px;
+      color:#aac;
+      white-space:nowrap;
+    }
+    .los-empty {
+      color:#888;
+      font-size:11px;
+      padding:4px 6px;
+    }
+
+    /* ============================
+       Nearest Stars panel
+       ============================ */
+    #nearestContainer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+    }
+    #nearestHeader {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #b6ffa8;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    #nearestList {
+      max-height: 190px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .nearest-item {
+      padding: 4px 6px;
+      margin: 2px 0;
+      cursor: pointer;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .nearest-item:hover {
+      background: rgba(120,255,170,0.18);
+    }
+    .nearest-name {
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      flex:1;
+    }
+    .nearest-dist {
+      font-size: 11px;
+      color:#9fb8a2;
+      white-space:nowrap;
+    }
+    .nearest-empty {
+      color:#888;
+      font-size:11px;
+      padding:4px 6px;
+    }
+
+    /* ============================
+       Catalog / View Stats panel
+       ============================ */
+    #catalogStatsContainer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+    }
+    #catalogStatsHeader {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #ffd28a;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    #catalogStats {
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding: 6px 8px;
+      border-radius: 4px;
+      line-height: 1.45;
+      font-size: 12px;
+      color: #ddd;
+    }
+    .stat-row {
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      padding:2px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.06);
+    }
+    .stat-row:last-child { border-bottom:none; }
+    .stat-label { color:#bbb; }
+    .stat-value { color:#fff; white-space:nowrap; }
   </style>
 </head>
 
@@ -87,6 +236,33 @@
       <table>
         <tbody id="info-table"></tbody>
       </table>
+
+      <!-- ✅ Line-of-sight list lives here -->
+      <div id="losContainer">
+        <div id="losHeader">Line of Sight Targets</div>
+        <div id="losList">
+          <div class="los-empty">Select a star to see neighbors in sightline…</div>
+        </div>
+      </div>
+
+      <!-- ✅ Nearest stars list lives here -->
+      <div id="nearestContainer">
+        <div id="nearestHeader">Nearest Stars</div>
+        <div id="nearestList">
+          <div class="nearest-empty">Select a star to see nearest neighbors…</div>
+        </div>
+      </div>
+
+      <!-- ✅ Catalog + View stats lives here -->
+      <div id="catalogStatsContainer">
+        <div id="catalogStatsHeader">Catalog / View Stats</div>
+        <div id="catalogStats">
+          <div class="stat-row"><span class="stat-label">Stars loaded (file)</span><span class="stat-value" id="statStarsLoaded">0</span></div>
+          <div class="stat-row"><span class="stat-label">Planets loaded (file)</span><span class="stat-value" id="statPlanetsLoaded">0</span></div>
+          <div class="stat-row"><span class="stat-label">Stars visible (range)</span><span class="stat-value" id="statStarsVisible">0</span></div>
+          <div class="stat-row"><span class="stat-label">Planets visible (range)</span><span class="stat-value" id="statPlanetsVisible">0</span></div>
+        </div>
+      </div>
     </div>
 
     <h3>Explore Local Skybox</h3>
@@ -310,6 +486,11 @@
       stars.push(virtualStar);
       virtualStars.push(virtualStar);
     }
+
+    // ✅ refresh view + stats + nearest list after adding
+    updateobjectData();
+    updateCatalogStats();
+    updateNearestStarsList(currentObjectMesh);
   }
 
   function removeVirtualStars() {
@@ -319,6 +500,11 @@
       if (indexInStars !== -1) stars.splice(indexInStars, 1);
     });
     virtualStars = [];
+
+    // ✅ refresh view + stats + nearest list after removing
+    updateobjectData();
+    updateCatalogStats();
+    updateNearestStarsList(currentObjectMesh);
   }
 
   document.getElementById('virtual_stars_checkbox').addEventListener('change', function() {
@@ -457,6 +643,8 @@
   $("#render_radius").click(function () {
     renderRadius = $('input[name=render_radius]:checked', '#render_radius').val();
     updateobjectData();
+    updateCatalogStats(); // ✅ update stats when view range changes
+    updateNearestStarsList(currentObjectMesh); // ✅ optional refresh
   });
 
   $('#control_mode').click(function () {
@@ -471,6 +659,68 @@
 
   var HIGHLIGHT_MAP = new THREE.TextureLoader().load("images/highlight.png");
   var SPRITE_MATERIAL = new THREE.SpriteMaterial({ map: HIGHLIGHT_MAP, depthWrite: false });
+
+  /* ===========================================================
+     ✅ Adaptive picking state (tiny star helper)
+     =========================================================== */
+  const BASE_PICK_PX = 10;           // normal pick radius
+  const MAX_EXTRA_PICK_PX = 22;      // how much it can grow
+  const PICK_GROW_PX_PER_SEC = 10;   // growth per second when wiggling
+  const WIGGLE_PX_THRESH = 3;        // <= this counts as targeting wiggle
+
+  let lastMoveT = performance.now();
+  let lastMoveX = 0;
+  let lastMoveY = 0;
+  let smallMoveTime = 0; // seconds of micro-move / idle wiggle
+
+  function updatePickState(x, y) {
+    const now = performance.now();
+    const dt = (now - lastMoveT) / 1000;
+    const dx = x - lastMoveX;
+    const dy = y - lastMoveY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist <= WIGGLE_PX_THRESH) {
+      smallMoveTime = Math.min(3, smallMoveTime + dt); // cap at ~3s
+    } else {
+      smallMoveTime = Math.max(0, smallMoveTime - dt*2); // decay faster
+    }
+
+    lastMoveT = now;
+    lastMoveX = x;
+    lastMoveY = y;
+  }
+
+  function currentPickPx() {
+    const extra = Math.min(MAX_EXTRA_PICK_PX, smallMoveTime * PICK_GROW_PX_PER_SEC);
+    return BASE_PICK_PX + extra;
+  }
+
+  function pickByScreenDistance(allStars, sx, sy, pickPx) {
+    let best = null;
+    let bestD = Infinity;
+
+    for (const s of allStars) {
+      if (!s || !s.position || !s.objectData) continue;
+
+      const id = s.objectData.primaryId;
+      if (id === currentObjectPrimaryId) continue;
+      if (currentSystem && currentSystem.star && id === currentSystem.star.objectData.primaryId) continue;
+
+      const p = s.position.clone().project(camera);
+      if (p.z < -1 || p.z > 1) continue; // behind camera clip-ish
+
+      const px = (p.x * 0.5 + 0.5) * window.innerWidth;
+      const py = (-p.y * 0.5 + 0.5) * window.innerHeight;
+
+      const d = Math.hypot(px - sx, py - sy);
+      if (d <= pickPx && d < bestD) {
+        bestD = d;
+        best = s;
+      }
+    }
+    return best;
+  }
 
   function updateTarget(prevStarMesh) {
     var prevControlMode = controlMode;
@@ -507,7 +757,7 @@
     }
   }
 
-  function isStar(mesh) { return mesh && mesh.objectData.type == "STAR"; }
+  function isStar(mesh) { return mesh && (mesh.objectData.type == "STAR" || mesh.objectData.type == "VIRTUAL_STAR"); }
 
   var currentObjectPrimaryId = "";
   var currentObjectMesh;
@@ -622,6 +872,9 @@
     }
 
     $("#jump_to_list").autocomplete({ source: nameList, minLength: 4 });
+
+    // ✅ keep stats fresh any time visibility recalcs
+    updateCatalogStats();
   }
 
   function closestNonPrimaryObject(intersects, currentPrimary, currentStarPrimary) {
@@ -683,6 +936,11 @@
         var text = raycaster.intersectObjects(tooltip.scaleObj.children, false);
         if (text.length > 0) return tooltipObject;
       }
+
+      /* ✅ screen-distance fallback with adaptive radius */
+      const pickPx = currentPickPx();
+      const fb = pickByScreenDistance(allStars, x, y, pickPx);
+      if (fb) return fb;
     }
     return null;
   }
@@ -691,6 +949,7 @@
     mouseX = event.clientX;
     mouseY = event.clientY;
     mouseMoved = true;
+    updatePickState(mouseX, mouseY); // ✅ adaptive pick update
   }
 
   function consumeMouseMove() {
@@ -753,6 +1012,9 @@
       if (!planetsByStarID[star]) planetsByStarID[star] = [];
       planetsByStarID[star].push(planet);
     });
+
+    // ✅ update stats after init
+    updateCatalogStats();
   }
 
   function createHighlightSprite() {
@@ -771,6 +1033,194 @@
     pos.add(position);
     if (currentSystem) pos.add(currentSystem.star.objectData.cartesianCoordsInLys);
     return pos;
+  }
+
+  /* ===========================================================
+     ✅ Line-of-sight listing
+     =========================================================== */
+  const losListEl = document.getElementById("losList");
+  const losHeaderEl = document.getElementById("losHeader");
+  const LOS_CONE_ANGLE_RAD = 0.015; // ~0.86 degrees
+  const LOS_MAX_ITEMS = 14;
+
+  function updateLineOfSightList(targetMesh) {
+    if (!losListEl || !targetMesh) return;
+
+    const camPos = camera.position.clone();
+    const targetPos = targetMesh.position.clone();
+    const dir = targetPos.clone().sub(camPos);
+    const dirLen = dir.length();
+    if (dirLen < 1e-9) return;
+    dir.normalize();
+
+    const allStars = visibleStars.concat(virtualStars);
+
+    const hits = [];
+    for (const s of allStars) {
+      if (!s || !s.position || !s.objectData) continue;
+      if (s.objectData.primaryId === targetMesh.objectData.primaryId) continue;
+
+      const v = s.position.clone().sub(camPos);
+      const vLen = v.length();
+      if (vLen < 1e-9) continue;
+
+      const vNorm = v.clone().divideScalar(vLen);
+      let dot = vNorm.dot(dir);
+      dot = Math.max(-1, Math.min(1, dot));
+
+      const angle = Math.acos(dot);
+      if (angle <= LOS_CONE_ANGLE_RAD) {
+        const along = v.dot(dir); // signed distance along sightline
+        hits.push({ mesh: s, along });
+      }
+    }
+
+    hits.sort((a,b) => a.along - b.along);
+
+    losListEl.innerHTML = "";
+    if (!hits.length) {
+      losListEl.innerHTML = '<div class="los-empty">No nearby stars along this sightline.</div>';
+      return;
+    }
+
+    const trimmed = hits.slice(0, LOS_MAX_ITEMS);
+
+    trimmed.forEach(h => {
+      const m = h.mesh;
+      const name = (m.objectData && m.objectData.properName) || ("Star " + m.objectData.primaryId);
+      const dist = prettyDistance(Math.abs(h.along));
+
+      const row = document.createElement("div");
+      row.className = "los-item";
+      row.dataset.primaryId = m.objectData.primaryId;
+
+      const n = document.createElement("span");
+      n.className = "los-name";
+      n.textContent = name;
+
+      const d = document.createElement("span");
+      d.className = "los-dist";
+      d.textContent = (h.along >= 0 ? "Ahead " : "Behind ") + dist;
+
+      row.appendChild(n);
+      row.appendChild(d);
+
+      row.onclick = () => {
+        const pid = row.dataset.primaryId;
+        const target = starsByID[pid] || allStars.find(s2 => String(s2.objectData.primaryId) === String(pid));
+        if (target) select(target);
+      };
+
+      losListEl.appendChild(row);
+    });
+  }
+
+  /* ===========================================================
+     ✅ Nearest stars listing (100 closest)
+     =========================================================== */
+  const nearestListEl = document.getElementById("nearestList");
+  const NEAREST_MAX_ITEMS = 100;
+
+  function prettyLy(lys) {
+    if (lys == null || isNaN(lys)) return "? ly";
+    return lys.toFixed(3) + " ly";
+  }
+
+  function getBaseStarForNearest(targetMesh) {
+    if (targetMesh && isStar(targetMesh)) return targetMesh;
+    if (currentSystem && currentSystem.star && isStar(currentSystem.star)) return currentSystem.star;
+    return null;
+  }
+
+  function updateNearestStarsList(targetMesh) {
+    if (!nearestListEl) return;
+
+    const baseStar = getBaseStarForNearest(targetMesh);
+    if (!baseStar) {
+      nearestListEl.innerHTML = '<div class="nearest-empty">Select a star to see nearest neighbors…</div>';
+      return;
+    }
+
+    const basePos = baseStar.position.clone();
+
+    const allStars = stars.slice(); // all loaded meshes (real + any virtual)
+    const items = [];
+
+    for (const s of allStars) {
+      if (!s || !s.position || !s.objectData) continue;
+      if (String(s.objectData.primaryId) === String(baseStar.objectData.primaryId)) continue;
+      if (s.objectData.type !== "STAR" && s.objectData.type !== "VIRTUAL_STAR") continue;
+
+      const d = basePos.distanceTo(s.position); // ly units
+      items.push({ mesh: s, dist: d });
+    }
+
+    items.sort((a,b) => a.dist - b.dist);
+
+    nearestListEl.innerHTML = "";
+    if (!items.length) {
+      nearestListEl.innerHTML = '<div class="nearest-empty">No other stars loaded.</div>';
+      return;
+    }
+
+    items.slice(0, NEAREST_MAX_ITEMS).forEach(it => {
+      const m = it.mesh;
+      const name = (m.objectData && m.objectData.properName) || ("Star " + m.objectData.primaryId);
+      const distStr = prettyLy(it.dist);
+
+      const row = document.createElement("div");
+      row.className = "nearest-item";
+      row.dataset.primaryId = m.objectData.primaryId;
+
+      const n = document.createElement("span");
+      n.className = "nearest-name";
+      n.textContent = name;
+
+      const d = document.createElement("span");
+      d.className = "nearest-dist";
+      d.textContent = distStr;
+
+      row.appendChild(n);
+      row.appendChild(d);
+
+      row.onclick = () => {
+        const pid = row.dataset.primaryId;
+        const target = starsByID[pid] || stars.find(s2 => String(s2.objectData.primaryId) === String(pid));
+        if (target) select(target);
+      };
+
+      nearestListEl.appendChild(row);
+    });
+  }
+
+  /* ===========================================================
+     ✅ Catalog / View Stats
+     =========================================================== */
+  const statStarsLoadedEl   = document.getElementById("statStarsLoaded");
+  const statPlanetsLoadedEl = document.getElementById("statPlanetsLoaded");
+  const statStarsVisibleEl  = document.getElementById("statStarsVisible");
+  const statPlanetsVisibleEl= document.getElementById("statPlanetsVisible");
+
+  function updateCatalogStats() {
+    const starsLoaded = (starData && starData.length) ? starData.length : 0;
+    const planetsLoaded = (planetData && planetData.length) ? planetData.length : 0;
+
+    const starsVisible = (visibleStars && visibleStars.length) ? visibleStars.length : 0;
+
+    let planetsVisible = 0;
+    if (visibleStars && visibleStars.length) {
+      visibleStars.forEach(function(s){
+        if (!s || !s.objectData) return;
+        const sid = s.objectData.primaryId;
+        const plist = planetsByStarID[sid];
+        if (plist && plist.length) planetsVisible += plist.length;
+      });
+    }
+
+    if (statStarsLoadedEl) statStarsLoadedEl.textContent = String(starsLoaded);
+    if (statPlanetsLoadedEl) statPlanetsLoadedEl.textContent = String(planetsLoaded);
+    if (statStarsVisibleEl) statStarsVisibleEl.textContent = String(starsVisible);
+    if (statPlanetsVisibleEl) statPlanetsVisibleEl.textContent = String(planetsVisible);
   }
 
   function select(mesh) {
@@ -832,6 +1282,13 @@
         updateCurrentTargets(mesh);
         updateTarget(prevTargetMesh);
         doReassign(currentObjectMesh);
+
+        // ✅ update LOS + nearest lists to match new target
+        updateLineOfSightList(currentObjectMesh);
+        updateNearestStarsList(currentObjectMesh);
+
+        // ✅ stats may need refresh (safe)
+        updateCatalogStats();
       }
     }
   }
@@ -1119,6 +1576,10 @@
         "Loaded catalog (" + starData.length + " stars, " + planetData.length + " planets)." +
         (isCustom ? " (custom)" : "");
     }
+
+    // ✅ nearest list and stats after catalog changes
+    updateNearestStarsList(currentObjectMesh);
+    updateCatalogStats();
   }
 
   function cacheBust(url) {
@@ -1270,6 +1731,10 @@
 
       mapAlive = true;
       refreshStarmapList();
+
+      // ✅ initial stats + nearest for first star
+      updateCatalogStats();
+      updateNearestStarsList(currentObjectMesh);
     });
   });
 
