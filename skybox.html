@@ -1177,7 +1177,7 @@
   function loadCatalogFromURL(url, isCustom) {
     catalogStatusEl.style.color = "#ffb";
     catalogStatusEl.textContent = "Loading catalog from URL...";
-
+localStorage.removeItem("customStarCatalog");
     return $.ajax({
       type: 'GET',
       dataType: 'text',
@@ -1249,7 +1249,7 @@
   function loadFallbackCatalog() {
     //const cached = localStorage.getItem("customStarCatalog");
     const cached = null;
-
+localStorage.removeItem("customStarCatalog");
     if (cached) {
       try {
         const parsed = validateCatalogObject(JSON.parse(cached));
