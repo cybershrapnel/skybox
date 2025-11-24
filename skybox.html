@@ -1247,7 +1247,9 @@
   });
 
   function loadFallbackCatalog() {
-    const cached = localStorage.getItem("customStarCatalog");
+    //const cached = localStorage.getItem("customStarCatalog");
+    const cached = null;
+
     if (cached) {
       try {
         const parsed = validateCatalogObject(JSON.parse(cached));
