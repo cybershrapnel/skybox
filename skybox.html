@@ -235,6 +235,80 @@
     .stat-row:last-child { border-bottom:none; }
     .stat-label { color:#bbb; }
     .stat-value { color:#fff; white-space:nowrap; }
+
+/* ============================
+   Minimap popup
+   ============================ */
+#minimapPopup{
+  position: fixed;
+  top: 90px;
+  left: 320px;
+  width: 300px;
+  background: rgba(10,10,14,0.96);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  z-index: 9999;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  display:none;
+  user-select:none;
+}
+#minimapHeader{
+  cursor: move;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #cfe3ff;
+  background: rgba(40,60,90,0.35);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+#minimapClose{
+  border:none;
+  background: transparent;
+  color:#fff;
+  font-size:16px;
+  line-height:16px;
+  cursor:pointer;
+  padding:0 4px;
+}
+
+#minimapCanvas{
+  width: 280px;
+  height: 280px;
+  margin: 8px 10px 6px 10px;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  display:block;
+}
+
+#minimapControls{
+  padding: 6px 10px 10px 10px;
+  display:flex;
+  gap:6px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+#minimapControls button{
+  font-size:12px;
+  padding:4px 8px;
+  cursor:pointer;
+}
+#minimapAxisLabel{
+  font-size:11px;
+  color:#9fd0ff;
+  margin-left:auto;
+}
+#minimapHint{
+  width:100%;
+  font-size:10px;
+  color:#99a;
+  margin-top:2px;
+}
+
+    
   </style>
 </head>
 
@@ -323,6 +397,17 @@
       </div>
     </div>
 
+    <h3>Map</h3>
+    <div class="overlay-panel">
+      <div class="ui-widget">
+        <button id="toggleMinimapBtn" class="catalog-btn">Map</button>
+        <div style="font-size:10px;color:#9aa;margin-top:6px;">
+          Opens a draggable 2D minimap of the current 3D starfield.
+        </div>
+      </div>
+    </div>
+
+    
     <h3>View</h3>
     <div class="overlay-panel">
       <table>
@@ -438,6 +523,26 @@
   <canvas id='webgl_canvas'></canvas>
 </div>
 
+<!-- ==========================
+     Draggable Minimap Popup
+     ========================== -->
+<div id="minimapPopup">
+  <div id="minimapHeader">
+    <span>Star Minimap</span>
+    <button id="minimapClose" title="Close">×</button>
+  </div>
+
+  <canvas id="minimapCanvas" width="280" height="280"></canvas>
+
+  <div id="minimapControls">
+    <button id="minimapZoomIn" title="Zoom in">Zoom +</button>
+    <button id="minimapZoomOut" title="Zoom out">Zoom −</button>
+    <button id="minimapRotate" title="Rotate axis plane">Rotate Axis</button>
+    <span id="minimapAxisLabel">XY</span>
+    <div id="minimapHint">Click a star dot to jump to it in 3D (works best when zoomed in).</div>
+  </div>
+</div>
+  
 <script>
   // visits counter
   const pageURL = encodeURIComponent(window.location.href);
@@ -1598,6 +1703,7 @@ function updateCatalogStats() {
         distanceHeader.text(newDistance);
       }
     }
+    maybeDrawMinimap(); // ✅ keep minimap fresh when open
 
     renderer.render(scene, camera);
   }
@@ -1969,7 +2075,226 @@ function updateCatalogStats() {
   }
 
   document.getElementById("autoExploreButton").addEventListener("click", toggleAutoExplore);
-</script>
 
+
+
+/* ===========================================================
+   ✅ 2D Minimap (draggable popup)
+   - Projects raw 3D coords into XY / XZ / YZ planes
+   - Zoom in/out
+   - Rotate plane
+   - Click star to select/jump in 3D
+   =========================================================== */
+
+let minimapOpen = false;
+let minimapZoom = 1.0;
+const MINIMAP_ZOOM_MIN = 0.25;
+const MINIMAP_ZOOM_MAX = 20.0;
+const MINIMAP_BASE_PX_PER_LY = 4.0; // 1 ly => 4 px at zoom=1 (tweak if desired)
+
+let minimapPlaneIndex = 0;
+const minimapPlanes = [
+  { key:"XY", a:"x", b:"y" },
+  { key:"XZ", a:"x", b:"z" },
+  { key:"YZ", a:"y", b:"z" }
+];
+
+const minimapPopup  = document.getElementById("minimapPopup");
+const minimapCanvas = document.getElementById("minimapCanvas");
+const mmCtx         = minimapCanvas ? minimapCanvas.getContext("2d") : null;
+const axisLabelEl   = document.getElementById("minimapAxisLabel");
+
+function getRawOf(mesh){
+  if (!mesh) return {x:0,y:0,z:0};
+  const c = mesh.objectData && mesh.objectData.cartesianCoordsInLys;
+  if (c) return c;
+
+  // fallback if ever needed
+  return {
+    x: mesh.position.x + (lastSelectedStarRaw?.x || 0),
+    y: mesh.position.y + (lastSelectedStarRaw?.y || 0),
+    z: mesh.position.z + (lastSelectedStarRaw?.z || 0)
+  };
+}
+
+function getMinimapCenterRaw(){
+  if (currentObjectMesh && currentObjectMesh.objectData && currentObjectMesh.objectData.cartesianCoordsInLys) {
+    return currentObjectMesh.objectData.cartesianCoordsInLys;
+  }
+  if (currentSystem && currentSystem.star && currentSystem.star.objectData.cartesianCoordsInLys) {
+    return currentSystem.star.objectData.cartesianCoordsInLys;
+  }
+  return {x:0,y:0,z:0}; // Sol
+}
+
+function drawMinimap(){
+  if (!minimapOpen || !mmCtx || !minimapCanvas) return;
+
+  const w = minimapCanvas.width;
+  const h = minimapCanvas.height;
+
+  // background
+  mmCtx.clearRect(0,0,w,h);
+  mmCtx.fillStyle = "rgba(0,0,0,0.92)";
+  mmCtx.fillRect(0,0,w,h);
+
+  const plane  = minimapPlanes[minimapPlaneIndex];
+  const center = getMinimapCenterRaw();
+  const pxPerLy = MINIMAP_BASE_PX_PER_LY * minimapZoom;
+
+  // visible radius in ly (fit to canvas but prefer renderRadius)
+  const fitLy = Math.min(w,h) / (2 * pxPerLy);
+  const displayRadiusLy = Math.min(renderRadius * 1.05, fitLy);
+
+  // draw boundary circle
+  mmCtx.save();
+  mmCtx.translate(w/2, h/2);
+  mmCtx.strokeStyle = "rgba(255,255,255,0.10)";
+  mmCtx.beginPath();
+  mmCtx.arc(0,0,displayRadiusLy * pxPerLy,0,Math.PI*2);
+  mmCtx.stroke();
+
+  // all stars (real + virtual), but filtered by current render radius
+  const all = stars.concat(virtualStars || []);
+
+  for (const s of all) {
+    if (!s || !s.objectData) continue;
+    const data = s.objectData;
+    if (data.type !== "STAR" && data.type !== "VIRTUAL_STAR") continue;
+    if (!isRender(data)) continue;
+
+    const raw = getRawOf(s);
+    const dx = raw[plane.a] - center[plane.a];
+    const dy = raw[plane.b] - center[plane.b];
+
+    if ((dx*dx + dy*dy) > displayRadiusLy*displayRadiusLy) continue;
+
+    const x = dx * pxPerLy;
+    const y = -dy * pxPerLy;
+
+    const isCurrent =
+      currentObjectMesh &&
+      currentObjectMesh.objectData &&
+      String(currentObjectMesh.objectData.primaryId) === String(data.primaryId);
+
+    mmCtx.fillStyle = isCurrent
+      ? "rgba(0,255,120,0.95)"
+      : (data.type === "VIRTUAL_STAR"
+          ? "rgba(255,255,255,0.55)"
+          : "rgba(150,180,255,0.80)");
+
+    const r = isCurrent ? 3.5 : 1.6;
+    mmCtx.beginPath();
+    mmCtx.arc(x, y, r, 0, Math.PI*2);
+    mmCtx.fill();
+  }
+
+  mmCtx.restore();
+
+  if (axisLabelEl) axisLabelEl.textContent = plane.key;
+}
+
+let lastMinimapDrawT = 0;
+function maybeDrawMinimap(){
+  if (!minimapOpen) return;
+  const now = performance.now();
+  if (now - lastMinimapDrawT > 200) { // ~5 fps
+    lastMinimapDrawT = now;
+    drawMinimap();
+  }
+}
+
+// Canvas click => select nearest star in that 2D plane
+if (minimapCanvas) {
+  minimapCanvas.addEventListener("click", function(ev){
+    if (!minimapOpen) return;
+
+    const rect = minimapCanvas.getBoundingClientRect();
+    const cx = ev.clientX - rect.left - rect.width/2;
+    const cy = ev.clientY - rect.top  - rect.height/2;
+
+    const plane  = minimapPlanes[minimapPlaneIndex];
+    const center = getMinimapCenterRaw();
+    const pxPerLy = MINIMAP_BASE_PX_PER_LY * minimapZoom;
+
+    const allStars = visibleStars.concat(virtualStars || []);
+    let best = null;
+    let bestPx = Infinity;
+
+    for (const s of allStars) {
+      if (!s || !s.objectData) continue;
+      if (!isRender(s.objectData)) continue;
+
+      const raw = getRawOf(s);
+      const sx = (raw[plane.a] - center[plane.a]) * pxPerLy;
+      const sy = -(raw[plane.b] - center[plane.b]) * pxPerLy;
+
+      const d = Math.hypot(sx - cx, sy - cy);
+      if (d < bestPx) { bestPx = d; best = s; }
+    }
+
+    const CLICK_THRESH_PX = 6;
+    if (best && bestPx <= CLICK_THRESH_PX) {
+      select(best);     // ✅ jump to star in 3D
+      drawMinimap();    // refresh highlight
+    }
+  });
+}
+
+// Toggle / controls
+const toggleMinimapBtn = document.getElementById("toggleMinimapBtn");
+const minimapCloseBtn  = document.getElementById("minimapClose");
+const mmZoomInBtn      = document.getElementById("minimapZoomIn");
+const mmZoomOutBtn     = document.getElementById("minimapZoomOut");
+const mmRotateBtn      = document.getElementById("minimapRotate");
+
+function openMinimap(){
+  minimapOpen = true;
+  if (minimapPopup) minimapPopup.style.display = "block";
+  drawMinimap();
+}
+function closeMinimap(){
+  minimapOpen = false;
+  if (minimapPopup) minimapPopup.style.display = "none";
+}
+function toggleMinimap(){
+  if (minimapOpen) closeMinimap();
+  else openMinimap();
+}
+
+if (toggleMinimapBtn) toggleMinimapBtn.addEventListener("click", toggleMinimap);
+if (minimapCloseBtn)  minimapCloseBtn.addEventListener("click", closeMinimap);
+
+if (mmZoomInBtn) {
+  mmZoomInBtn.addEventListener("click", function(){
+    minimapZoom = Math.min(MINIMAP_ZOOM_MAX, minimapZoom * 1.35);
+    drawMinimap();
+  });
+}
+if (mmZoomOutBtn) {
+  mmZoomOutBtn.addEventListener("click", function(){
+    minimapZoom = Math.max(MINIMAP_ZOOM_MIN, minimapZoom / 1.35);
+    drawMinimap();
+  });
+}
+if (mmRotateBtn) {
+  mmRotateBtn.addEventListener("click", function(){
+    minimapPlaneIndex = (minimapPlaneIndex + 1) % minimapPlanes.length;
+    drawMinimap();
+  });
+}
+
+// Make popup draggable (jQuery UI already loaded)
+$(function(){
+  $("#minimapPopup").draggable({
+    handle: "#minimapHeader",
+    containment: "window"
+  });
+});
+
+
+  
+</script>
+  
 </body>
 </html>
