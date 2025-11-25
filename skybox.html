@@ -1,0 +1,3994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Digital Skybox</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+  <link rel="stylesheet" type="text/css" href="resources/css/jquery-ui.css">
+  <link rel="stylesheet" type="text/css" href="css/uncharted.css">
+
+  <script type="text/javascript" src="resources/jquery-2.0.0.min.js"></script>
+  <script type="text/javascript" src="resources/tinycolor-min.js"></script>
+  <script type="text/javascript" src="resources/jquery-ui.min.js"></script>
+  <script src="resources/three.min.js"></script>
+  <script src="resources/stats.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/FreeLookControls.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="js/DynamicMarker.js"></script>
+  <script src="js/TweenControls.js"></script>
+  <script src="js/TooltipMarker.js"></script>
+  <script src="js/System.js"></script>
+  <script src="js/Shaders.js"></script>
+  <script src="js/CircularQueue.js"></script>
+  <script src="js/RollingAverage.js"></script>
+  <script src="js/PlanetBuilder.js"></script>
+  <script src="resources/Detector.js"></script>
+
+  <style>
+    /* make Characteristics + LOS + Nearest + Stats scroll inside the panel */
+    #infoPanel{
+      max-height: 70vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 6px;
+      box-sizing: border-box;
+    }
+    #infoPanel::-webkit-scrollbar { width: 8px; }
+    #infoPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 6px; }
+    #infoPanel::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+
+    #catalogStatus {
+      font-size: 11px;
+      line-height: 1.3;
+      margin-top: 6px;
+      color: #cfcfcf;
+      word-break: break-word;
+    }
+    .catalog-btn {
+      margin: 4px 0;
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #starmapListContainer {
+      margin-top: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      background: rgba(0,0,0,0.35);
+      padding: 6px;
+      font-size: 12px;
+    }
+    .starmap-item {
+      padding: 6px 8px;
+      margin: 2px 0;
+      cursor: pointer;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .starmap-item:hover { background: rgba(255,255,255,0.12); }
+    .starmap-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .starmap-size { color:#9aa; font-size:11px; white-space:nowrap; }
+
+    /* ============================
+       LOS (Line-of-sight) panel
+       ============================ */
+    #losContainer {
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+    }
+    #losHeader {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #9fd0ff;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    #losList {
+      max-height: 140px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .los-item {
+      padding: 4px 6px;
+      margin: 2px 0;
+      cursor: pointer;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .los-item:hover { background: rgba(120,170,255,0.18); }
+    .los-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+    .los-dist { font-size: 11px; color:#aac; white-space:nowrap; }
+    .los-empty { color:#888; font-size:11px; padding:4px 6px; }
+
+    /* ============================
+       Nearest Stars panel
+       ============================ */
+    #nearestContainer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+    }
+    #nearestHeader {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #b6ffa8;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    #nearestList {
+      max-height: 190px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .nearest-item {
+      padding: 4px 6px;
+      margin: 2px 0;
+      cursor: pointer;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .nearest-item:hover { background: rgba(120,255,170,0.18); }
+    .nearest-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+    .nearest-dist { font-size: 11px; color:#9fb8a2; white-space:nowrap; }
+    .nearest-empty { color:#888; font-size:11px; padding:4px 6px; }
+
+    /* ============================
+       Catalog / View Stats panel
+       ============================ */
+    #catalogStatsContainer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+    }
+    #catalogStatsHeader {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #ffd28a;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    #catalogStats {
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding: 6px 8px;
+      border-radius: 4px;
+      line-height: 1.45;
+      font-size: 12px;
+      color: #ddd;
+    }
+    .stat-row {
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      padding:2px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.06);
+    }
+    .stat-row:last-child { border-bottom:none; }
+    .stat-label { color:#bbb; }
+    .stat-value { color:#fff; white-space:nowrap; }
+
+    /* ============================
+       Minimap popup
+       ============================ */
+    #minimapPopup{
+      position: fixed;
+      top: 90px;
+      left: 320px;
+      width: 300px;
+      background: rgba(10,10,14,0.96);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 8px;
+      z-index: 9999;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      display:none;
+      user-select:none;
+    }
+    #minimapHeader{
+      cursor: move;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #cfe3ff;
+      background: rgba(40,60,90,0.35);
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    #minimapClose{
+      border:none;
+      background: transparent;
+      color:#fff;
+      font-size:16px;
+      line-height:16px;
+      cursor:pointer;
+      padding:0 4px;
+    }
+
+    #minimapCanvas{
+      width: 280px;
+      height: 280px;
+      margin: 8px 10px 6px 10px;
+      background: rgba(0,0,0,0.9);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      display:block;
+    }
+
+    #minimapControls{
+      padding: 6px 10px 10px 10px;
+      display:flex;
+      gap:6px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    #minimapControls button{
+      font-size:12px;
+      padding:4px 8px;
+      cursor:pointer;
+    }
+    #minimapAxisLabel{
+      font-size:11px;
+      color:#9fd0ff;
+      margin-left:auto;
+    }
+    #minimapHint{
+      width:100%;
+      font-size:10px;
+      color:#99a;
+      margin-top:2px;
+    }
+
+    #minimapHoverBar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:6px 10px 0 10px;
+      font-size:11px;
+      color:#ddd;
+    }
+    #minimapHoverName{
+      color:#cfe3ff;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:180px;
+    }
+    #minimapHoverDist{
+      color:#9fb8a2;
+      white-space:nowrap;
+    }
+
+    /* ============================
+       Visited Objects panel
+       ============================ */
+    #visitedContainer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+    }
+#visitedHeaderRow{
+  display:flex;
+  flex-direction:column;   /* <-- puts filters under title */
+  align-items:flex-start;
+  gap:2px;
+  margin-bottom:4px;
+}
+
+#visitedFilters{
+  width:100%;
+  justify-content:flex-start;
+  gap:10px;
+  font-size:11px;
+  color:#bbb;
+  white-space:normal;      /* allow wrap if needed */
+  flex-wrap:wrap;
+}
+
+    #visitedHeader {
+      font-weight: bold;
+      color: #ff9fe8;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    #visitedFilters label{
+      display:flex;
+      gap:4px;
+      align-items:center;
+      cursor:pointer;
+    }
+
+    #visitedList {
+      max-height: 190px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .visited-item {
+      padding: 4px 6px;
+      margin: 2px 0;
+      cursor: pointer;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      border-left: 3px solid transparent;
+    }
+    .visited-item:hover { background: rgba(255,160,240,0.18); }
+    .visited-item.star-item { border-left-color: rgba(140,180,255,0.95); }
+    .visited-item.planet-item { border-left-color: rgba(140,255,190,0.95); }
+    .visited-item.virtual-item { border-left-color: rgba(255,255,255,0.8); }
+    .visited-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+    .visited-dist { font-size: 11px; color:#d8a9cf; white-space:nowrap; }
+    .visited-empty { color:#888; font-size:11px; padding:4px 6px; }
+
+    /* ============================
+       Travel tiny play button (global)
+       ============================ */
+    .travel-play{
+      font-size:10px;
+      padding:1px 4px;
+      border:1px solid rgba(255,255,255,0.25);
+      background: rgba(0,0,0,0.65);
+      border-radius:3px;
+      cursor:pointer;
+      color:#cfe3ff;
+      line-height:12px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:14px;
+      height:14px;
+      user-select:none;
+      transform: translateY(-1px);
+      flex:0 0 auto;
+    }
+    .travel-play:hover{
+      background: rgba(120,200,255,0.25);
+      border-color: rgba(120,200,255,0.6);
+    }
+
+    /* ============================
+       Throneworld (Sol) display
+       ============================ */
+    #throneworldContainer{
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      font-size:12px;
+    }
+    #throneworldHeader{
+      font-weight:bold;
+      margin-bottom:4px;
+      color:#ffd28a;
+      font-size:11px;
+      letter-spacing:0.3px;
+      text-transform:uppercase;
+    }
+    #throneworldList{
+      border:1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding:4px;
+      border-radius:4px;
+    }
+    .throneworld-item{
+      padding:4px 6px;
+      margin:2px 0;
+      border-radius:3px;
+      background: rgba(255,210,138,0.10);
+      color:#ffd28a;
+      font-weight:bold;
+      border-left:3px solid rgba(255,210,138,0.95);
+      cursor:pointer;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    /* ============================
+       Colonies panel (under throneworld)
+       ============================ */
+    #colonyContainer{
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      font-size:12px;
+    }
+    #colonyHeader{
+      font-weight:bold;
+      margin-bottom:4px;
+      color:#9fd0ff;
+      font-size:11px;
+      letter-spacing:0.3px;
+      text-transform:uppercase;
+    }
+    #colonyList{
+      max-height: 170px;
+      overflow-y:auto;
+      border:1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding:4px;
+      border-radius:4px;
+    }
+    .colony-item{
+      padding:4px 6px;
+      margin:2px 0;
+      cursor:pointer;
+      border-radius:3px;
+      background: rgba(255,255,255,0.05);
+      border-left:3px solid rgba(140,255,190,0.95);
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .colony-item:hover{ background: rgba(120,255,170,0.18); }
+    .colony-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+    .colony-empty{ color:#888; font-size:11px; padding:4px 6px; }
+
+    /* ============================
+       Homeworlds panel (under colonies)
+       ============================ */
+    #homeworldContainer{
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      font-size:12px;
+    }
+    #homeworldHeader{
+      font-weight:bold;
+      margin-bottom:4px;
+      color:#b6ffa8;
+      font-size:11px;
+      letter-spacing:0.3px;
+      text-transform:uppercase;
+    }
+    #homeworldList{
+      max-height: 170px;
+      overflow-y:auto;
+      border:1px solid #333;
+      background: rgba(0,0,0,0.35);
+      padding:4px;
+      border-radius:4px;
+    }
+    .homeworld-item{
+      padding:4px 6px;
+      margin:2px 0;
+      cursor:pointer;
+      border-radius:3px;
+      background: rgba(255,255,255,0.05);
+      border-left:3px solid rgba(140,255,140,0.95);
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .homeworld-item:hover{ background: rgba(120,255,170,0.18); }
+    .homeworld-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+    .homeworld-empty{ color:#888; font-size:11px; padding:4px 6px; }
+
+    /* ============================
+       Visit Details draggable popup
+       ============================ */
+    #visitDetailsPopup{
+      position: fixed;
+      top: 140px;
+      left: 640px;
+      width: 360px;
+      background: rgba(10,10,14,0.98);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 8px;
+      z-index: 10000;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      display:none;
+      user-select:none;
+    }
+    #visitDetailsHeader{
+      cursor: move;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #ffd6fb;
+      background: rgba(90,40,80,0.30);
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    #visitDetailsClose{
+      border:none;
+      background: transparent;
+      color:#fff;
+      font-size:16px;
+      line-height:16px;
+      cursor:pointer;
+      padding:0 4px;
+    }
+
+    #visitDetailsBody{
+      padding: 8px 10px 10px 10px;
+      max-height: 60vh;
+      overflow-y: auto;
+      font-size: 12px;
+      color: #ddd;
+    }
+
+    .vd-section{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      padding:3px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.06);
+    }
+    .vd-section:last-child{ border-bottom:none; }
+    .vd-label{ color:#bbb; }
+
+    .vd-subheader{
+      margin-top:8px;
+      font-size:11px;
+      font-weight:bold;
+      color:#b6ffa8;
+      letter-spacing:0.3px;
+      text-transform:uppercase;
+    }
+
+    .vd-planets{
+      margin-top:4px;
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:4px;
+      background: rgba(0,0,0,0.3);
+      padding:4px;
+      max-height: 240px;
+      overflow-y:auto;
+    }
+
+    .vd-planet-row{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      padding:3px 4px;
+      margin:2px 0;
+      border-radius:3px;
+      background: rgba(255,255,255,0.05);
+      cursor:pointer;
+      align-items:center;
+    }
+    .vd-planet-row:hover{
+      background: rgba(140,255,190,0.12);
+    }
+
+    .vd-planet-left{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex:1;
+      min-width:0;
+    }
+
+    .vd-planet-name{
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      flex:1;
+      min-width:0;
+    }
+    .vd-planet-type{
+      font-size:11px;
+      color:#9fb8a2;
+      white-space:nowrap;
+      flex:0 0 auto;
+    }
+
+    .vd-planet-stats{
+      margin:2px 0 6px 8px;
+      font-size:11px;
+      color:#cfcfcf;
+      line-height:1.35;
+    }
+
+    #visitActionRow{
+      margin-top:8px;
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    #visitActionRow button{
+      font-size:12px;
+      padding:4px 8px;
+      cursor:pointer;
+    }
+
+    #visitRenameRow{
+      margin-top:10px;
+      display:flex;
+      gap:6px;
+      align-items:center;
+    }
+    #visitRenameInput{
+      flex:1;
+      font-size:12px;
+      padding:4px 6px;
+      background: rgba(0,0,0,0.6);
+      color:#fff;
+      border:1px solid rgba(255,255,255,0.18);
+      border-radius:4px;
+    }
+    #visitRenameBtn{
+      font-size:12px;
+      padding:4px 8px;
+      cursor:pointer;
+    }
+    #visitRenameMsg{
+      margin-top:6px;
+      font-size:11px;
+      color:#ffd28a;
+    }
+    .vd-parent-star-btn{
+  font-size:12px;
+  padding:3px 8px;
+  cursor:pointer;
+  background: rgba(120,200,255,0.12);
+  border: 1px solid rgba(120,200,255,0.45);
+  color:#cfe3ff;
+  border-radius:4px;
+}
+.vd-parent-star-btn:hover{
+  background: rgba(120,200,255,0.25);
+}
+
+  </style>
+</head>
+
+<body>
+
+<div>
+  <div id="selector">
+    <h3><span id="info-header" class="accordion-header"></span><b> - <span id="distance-header"
+                                                                           class="accordion-header"></span></b></h3>
+    <div class="overlay-panel" id="infoPanel">
+      <table>
+        <tbody id="info-table"></tbody>
+      </table>
+
+      <div id="losContainer">
+        <div id="losHeader">Line of Sight Targets</div>
+        <div id="losList">
+          <div class="los-empty">Select a star to see neighbors in sightline…</div>
+        </div>
+      </div>
+
+      <div id="nearestContainer">
+        <div id="nearestHeader">Nearest Stars</div>
+        <div id="nearestList">
+          <div class="nearest-empty">Select a star to see nearest neighbors…</div>
+        </div>
+      </div>
+
+      <div id="catalogStatsContainer">
+        <div id="catalogStatsHeader">Catalog / View Stats</div>
+        <div id="catalogStats">
+          <div class="stat-row"><span class="stat-label">Stars loaded (file)</span><span class="stat-value" id="statStarsLoaded">0</span></div>
+          <div class="stat-row"><span class="stat-label">Planets loaded (file)</span><span class="stat-value" id="statPlanetsLoaded">0</span></div>
+          <div class="stat-row"><span class="stat-label">Stars visible (range)</span><span class="stat-value" id="statStarsVisible">0</span></div>
+          <div class="stat-row"><span class="stat-label">Planets visible (range)</span><span class="stat-value" id="statPlanetsVisible">0</span></div>
+          <div class="stat-row"><span class="stat-label">Virtual stars loaded</span><span class="stat-value" id="statVirtualStarsLoaded">0</span></div>
+          <div class="stat-row"><span class="stat-label">Total distance traveled</span><span class="stat-value" id="statTotalDistanceLy">0.000 ly</span></div>
+          <div class="stat-row"><span class="stat-label">Avg distance per hour</span><span class="stat-value" id="statAvgLyPerHour">0.000 ly/h</span></div>
+        </div>
+      </div>
+
+      <div id="visitedContainer">
+        <div id="visitedHeaderRow">
+          <div id="visitedHeader">Visited Objects (in render range)</div>
+<div id="visitedFilters">
+  <label><input type="checkbox" id="hideVisitedStars"> hide stars</label>
+  <label><input type="checkbox" id="hideVisitedPlanets"> hide planets</label>
+  <label><input type="checkbox" id="hideVisitedVirtualStars"> hide virtual</label>
+
+          </div>
+        </div>
+        <div id="visitedList">
+          <div class="visited-empty">No visits yet…</div>
+        </div>
+
+        <!-- ✅ Throneworld (Sol) always displayed above colonies/homeworlds -->
+        <div id="throneworldContainer">
+          <div id="throneworldHeader">Throneworld</div>
+          <div id="throneworldList">
+            <div class="throneworld-item" id="throneworldItem" data-primary-id="1">
+              <span class="travel-play" id="thronePlay">►</span>
+              <span id="throneworldName">Sol</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ Colonies list directly under throneworld -->
+        <div id="colonyContainer">
+          <div id="colonyHeader">Colonized Planets</div>
+          <div id="colonyList">
+            <div class="colony-empty">No colonies yet…</div>
+          </div>
+        </div>
+
+        <!-- ✅ Homeworlds list directly under colonies -->
+        <div id="homeworldContainer">
+          <div id="homeworldHeader">Homeworlds</div>
+          <div id="homeworldList">
+            <div class="homeworld-empty">No homeworlds yet…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Explore Local Skybox</h3>
+    <div class="overlay-panel">
+      <div class="ui-widget">
+        <label for="jump_to_list">Search: </label>
+        <input id="jump_to_list" type="text">
+      </div>
+    </div>
+
+    <h3>MEQUAVIS Location Data</h3>
+    <div class="overlay-panel">
+      <div class="ui-widget">
+        <font size=2>Current Phase Layer Location:</font> <br />1@2.1.1.1.1.1:0<br /><br />
+        <input id="jump_to_list" type="text">
+        <br />
+        <font size=1><center> Obtain a valid MEQUAVIS hyperstack<br />
+                             address from the NanoCheeZe JAVA app<br />
+                             hint: There is only 1 active layer atm</center></font>
+      </div>
+    </div>
+
+    <h3>Load and View in VR</h3>
+    <div class="overlay-panel">
+      <div class="ui-widget">
+        <a href="https://xtdevelopment.net/babylon">Launch in VR</a><br />
+      </div>
+    </div>
+
+    <h3>Catalog</h3>
+    <div class="overlay-panel">
+      <div class="ui-widget">
+        <button id="loadCatalogBtn" class="catalog-btn">Load Local star_catalog.txt</button>
+        <button id="clearCatalogBtn" class="catalog-btn">Reload Default Server Catalog</button>
+        <input id="catalogFileInput" type="file" accept=".txt,.json,application/json,text/plain" style="display:none;">
+        <div id="catalogStatus">Using server catalog.</div>
+
+        <div id="starmapListContainer">
+          <div style="font-size:11px;color:#bbb;margin-bottom:6px;">Available starmaps:</div>
+          <div id="starmapList">
+            <div style="color:#888;">List will load after map starts…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Map</h3>
+    <div class="overlay-panel">
+      <div class="ui-widget">
+        <button id="toggleMinimapBtn" class="catalog-btn">Map</button>
+
+        <!-- ✅ Save / Load buttons in the Map section tab -->
+        <button id="saveSessionBtn" class="catalog-btn">Save Session</button>
+        <!-- ✅ NEW: Save the currently loaded catalog/starmap JSON -->
+<button id="saveCatalogBtn" class="catalog-btn">Save Current Map (Catalog JSON)</button>
+        <button id="loadSessionBtn" class="catalog-btn">Load Session</button>
+        <input id="sessionFileInput" type="file" accept=".json,application/json,text/plain" style="display:none;">
+
+        <div style="font-size:10px;color:#9aa;margin-top:6px;">
+          Opens a draggable 2D minimap of the current 3D starfield.
+          <br/>Save/Load stores visited objects, colonies, homeworlds, renames, and travel stats.
+        </div>
+      </div>
+    </div>
+
+    <h3>View</h3>
+    <div class="overlay-panel">
+      <table>
+        <tbody>
+
+        <tr class="header-row overlay-header">
+          <td><b>Control Mode</b></td>
+        </tr>
+        <tr class="child-row">
+          <td>
+            <form id="control_mode" name="control_mode" action="#" method="POST">
+              <div>
+                <label><input type="radio" name="control_mode" value="orbit" checked></label> Orbit
+                <label><input type="radio" name="control_mode" value="free"></label> Free Look
+              </div>
+            </form>
+          </td>
+        </tr>
+
+        <tr class="header-row overlay-header">
+          <td><b>Virtual Stars</b></td>
+        </tr>
+        <tr class="child-row">
+          <td>
+            <input type="checkbox" id="virtual_stars_checkbox" name="virtual_stars"> Enable Virtual Stars
+
+            <div style="margin-top:6px;">
+              <label for="virtualStarAmpSlider" style="font-size:12px;">
+                Virtual stars amplifier: <span id="virtualStarAmpValue">0%</span>
+              </label>
+              <input
+                type="range"
+                id="virtualStarAmpSlider"
+                min="-100"
+                max="300"
+                step="1"
+                value="0"
+                style="width:100%;"
+              />
+              <div style="font-size:10px;color:#9aa;margin-top:2px;">
+                0% = default density. Negative reduces, positive increases.
+              </div>
+            </div>
+
+            <div>
+              <button id="autoExploreButton">Toggle Auto Explore</button>
+            </div>
+
+            <div style="margin-top:6px;">
+              <button id="virtualDriftButton" class="catalog-btn" disabled>
+                Jump to Virtual Star Drift
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <tr class="header-row overlay-header">
+          <td><b>Render Radius (Sol lys)</b></td>
+        </tr>
+        <tr class="child-row">
+          <td>
+            <form id="render_radius" name="render_radius" action="#" method="POST">
+              <div>
+                <label><input type="radio" name="render_radius" value="10"></label> 10
+                <label><input type="radio" name="render_radius" value="25"></label> 25
+                <label><input type="radio" name="render_radius" value="50"></label> 50
+              </div>
+              <div>
+                <label><input type="radio" name="render_radius" value="75" checked></label> 75
+                <label><input type="radio" name="render_radius" value="150"></label> 150
+                <label><input type="radio" name="render_radius" value="200"></label> 200
+              </div>
+            </form>
+          </td>
+        </tr>
+
+        <tr class="header-row overlay-header">
+          <td><b>Highlight</b></td>
+        </tr>
+        <tr class="child-row">
+          <td>
+            <form id="highlight_mode" name="highlight_mode" action="#" method="POST">
+              <div>
+                <label><input type="radio" name="highlight_mode" value="none" checked></label> None
+                <label><input type="radio" name="highlight_mode" value="exoplanets"></label> Exoplanets
+                <label><input type="radio" name="highlight_mode" value="all"></label> All
+              </div>
+            </form>
+          </td>
+        </tr>
+
+        <tr class="header-row overlay-header">
+          <td><b>Menu</b></td>
+        </tr>
+        <tr class="child-row">
+          <td>
+            <button id="collapseMenuBtn" class="catalog-btn">Collapse menu</button>
+          </td>
+        </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<div id="attribution-overlay">
+  <span id="page-counter"></span><br />
+  <a href="https://mequavis.com" target="_top">MEQUAVIS.COM</a><br />
+</div>
+
+  <canvas id='webgl_canvas'></canvas>
+</div>
+
+<!-- ==========================
+     Draggable Minimap Popup
+     ========================== -->
+<div id="minimapPopup">
+  <div id="minimapHeader">
+    <span>Star Minimap</span>
+    <button id="minimapClose" title="Close">×</button>
+  </div>
+
+  <div id="minimapHoverBar">
+    <span id="minimapHoverName">Hover a star…</span>
+    <span id="minimapHoverDist"></span>
+  </div>
+
+  <canvas id="minimapCanvas" width="280" height="280"></canvas>
+
+  <div id="minimapControls">
+    <button id="minimapZoomIn" title="Zoom in">Zoom +</button>
+    <button id="minimapZoomOut" title="Zoom out">Zoom −</button>
+    <button id="minimapRotate" title="Rotate axis plane">Rotate Axis</button>
+    <span id="minimapAxisLabel">XY</span>
+    <div id="minimapHint">Click a star dot to jump to it in 3D (works best when zoomed in).</div>
+  </div>
+</div>
+
+<!-- ==========================
+     Draggable Visit Details Popup
+     ========================== -->
+<div id="visitDetailsPopup">
+  <div id="visitDetailsHeader">
+    <span id="visitDetailsTitle">Visited Object</span>
+    <button id="visitDetailsClose" title="Close">×</button>
+  </div>
+
+  <div id="visitDetailsBody">
+    <div id="visitDetailsContent"></div>
+
+    <!-- ✅ actions -->
+    <div id="visitActionRow">
+      <button id="visitTravelBtn">Travel To</button>
+      <button id="visitColonizeBtn" style="display:none;">Colonize</button>
+    </div>
+
+    <div id="visitRenameRow">
+      <input id="visitRenameInput" type="text" placeholder="Rename this object">
+      <button id="visitRenameBtn">Rename</button>
+    </div>
+
+    <div id="visitRenameMsg"></div>
+  </div>
+</div>
+
+<script>
+  // visits counter
+  const pageURL = encodeURIComponent(window.location.href);
+  const counterURL = `https://www.xtdevelopment.net/hits/index.php?page=${pageURL}`;
+
+  const DEFAULT_CATALOG_URL = "star_catalog.txt";
+
+  fetch(counterURL)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('page-counter').textContent =
+        data.hits ? `Visits: ${data.hits}` : 'Visit count unavailable';
+    })
+    .catch(() => {
+      document.getElementById('page-counter').textContent = 'Visit count unavailable';
+    });
+
+  let virtualStars = [];
+
+  const virtualStarsCheckbox = document.getElementById('virtual_stars_checkbox');
+  const virtualDriftButton = document.getElementById('virtualDriftButton');
+  const virtualStarAmpSlider = document.getElementById("virtualStarAmpSlider");
+  const virtualStarAmpValue  = document.getElementById("virtualStarAmpValue");
+
+
+
+
+  
+  function getVirtualStarAmpMultiplier() {
+    if (!virtualStarAmpSlider) return 1.0;
+    const pct = parseFloat(virtualStarAmpSlider.value);
+    if (isNaN(pct)) return 1.0;
+    return Math.max(0, 1 + pct / 100);
+  }
+
+  function updateVirtualStarAmpDisplay() {
+    if (virtualStarAmpValue && virtualStarAmpSlider) {
+      const pct = parseFloat(virtualStarAmpSlider.value) || 0;
+      virtualStarAmpValue.textContent = pct.toFixed(0) + "%";
+    }
+  }
+  updateVirtualStarAmpDisplay();
+
+  function createVirtualStars() {
+    const baseNumStars = (100*renderRadius)-900;
+    const ampMult = getVirtualStarAmpMultiplier();
+    let numStars = Math.max(0, Math.floor(baseNumStars * ampMult));
+    const maxDistance = renderRadius * 12;
+    if (numStars < 1) numStars = 1;
+
+    for (let i = 0; i < numStars; i++) {
+      const randomX = Math.random() * maxDistance - maxDistance / 2;
+      const randomY = Math.random() * maxDistance - maxDistance / 2;
+      const randomZ = Math.random() * maxDistance - maxDistance / 2;
+
+      const clickableGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+      const starMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        opacity: 0.8,
+        transparent: true
+      });
+      const virtualStar = new THREE.Mesh(clickableGeometry, starMaterial);
+      virtualStar.position.set(randomX, randomY, randomZ);
+
+      const planetGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+
+      const getRandomColor = () => {
+        const colorType = Math.random();
+        if (colorType < 0.3) {
+          if (Math.random() < 0.5) {
+            return new THREE.Color(Math.random() * 0.5, Math.random() * 0.5 + 0.5, 1);
+          } else {
+            return new THREE.Color(1, Math.random() * 0.5, Math.random() * 0.5 + 0.5);
+          }
+        } else {
+          const solidColors = [
+            new THREE.Color(1, 0, 0),
+            new THREE.Color(0, 1, 0),
+            new THREE.Color(0, 0, 1),
+            new THREE.Color(1, 0, 1)
+          ];
+          return solidColors[Math.floor(Math.random() * solidColors.length)];
+        }
+      };
+
+      const planetMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() });
+      const innerPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
+      innerPlanet.position.set(0, 0, 0);
+      virtualStar.add(innerPlanet);
+
+      const moonGeometry = new THREE.SphereGeometry(0.005, 8, 8);
+      const moonMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 });
+      const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+      moon.position.set(0, 0, 0);
+      moon.objectData = { type: "MOON" };
+      innerPlanet.add(moon);
+
+      virtualStar.objectData = {
+        primaryId: `virtual_star_${i}`,
+        properName: `Virtual Star ${i + 1}`,
+        type: "VIRTUAL_STAR",
+        radius: { value: { quantity: 0.01 } },
+        solDistance: { value: { quantity: Math.random() * renderRadius } },
+        nearbyObjectIDs: [],
+        cartesianCoordsInLys: { x: randomX, y: randomY, z: randomZ }
+      };
+
+      scene.add(virtualStar);
+      stars.push(virtualStar);
+      virtualStars.push(virtualStar);
+    }
+
+    updateobjectData();
+    updateCatalogStats();
+    updateNearestStarsList(currentObjectMesh);
+    updateVirtualDriftButtonState();
+  }
+
+  function removeVirtualStars() {
+    virtualStars.forEach(star => {
+      scene.remove(star);
+      const indexInStars = stars.indexOf(star);
+      if (indexInStars !== -1) stars.splice(indexInStars, 1);
+    });
+    virtualStars = [];
+
+    updateobjectData();
+    updateCatalogStats();
+    updateNearestStarsList(currentObjectMesh);
+    updateVirtualDriftButtonState();
+  }
+
+  function updateVirtualDriftButtonState() {
+    if (!virtualDriftButton) return;
+    virtualDriftButton.disabled = !(virtualStarsCheckbox && virtualStarsCheckbox.checked);
+  }
+
+  if (virtualStarsCheckbox) {
+    virtualStarsCheckbox.addEventListener('change', function() {
+      if (this.checked) createVirtualStars();
+      else removeVirtualStars();
+      updateVirtualDriftButtonState();
+    });
+  }
+
+  if (virtualStarAmpSlider) {
+    virtualStarAmpSlider.addEventListener("input", function() {
+      updateVirtualStarAmpDisplay();
+      if (virtualStarsCheckbox && virtualStarsCheckbox.checked) {
+        removeVirtualStars();
+        createVirtualStars();
+      }
+    });
+  }
+
+  if (virtualDriftButton) {
+    virtualDriftButton.addEventListener('click', function() {
+      if (!virtualStarsCheckbox || !virtualStarsCheckbox.checked) return;
+      if (!virtualStars || !virtualStars.length) return;
+
+      let best = virtualStars[0];
+      let bestD = Infinity;
+      for (const v of virtualStars) {
+        const d = camera.position.distanceTo(v.position);
+        if (d < bestD) { bestD = d; best = v; }
+      }
+      select(best, { driftMode: true });
+    });
+  }
+
+  updateVirtualDriftButtonState();
+</script>
+
+<script>
+  $(function () {
+    $("#selector").accordion({
+      collapsible: true,
+      animate: 100,
+      heightStyle: 'panel',
+      active: 4
+    });
+
+    let menuCollapsed = false;
+
+    function collapseMenu() {
+      const $acc = $("#selector");
+      const $headers = $acc.children("h3");
+      const $panels = $headers.next();
+
+      $acc.accordion("option", "active", false);
+      $headers.not(":first").hide();
+      $panels.not(":first").hide();
+
+      menuCollapsed = true;
+    }
+
+    function restoreMenu() {
+      const $acc = $("#selector");
+      const $headers = $acc.children("h3");
+      const $panels = $headers.next();
+
+      $headers.show();
+      $panels.show();
+
+      menuCollapsed = false;
+      $acc.accordion("refresh");
+    }
+
+    $("#collapseMenuBtn").on("click", function(e){
+      e.preventDefault();
+      if (!menuCollapsed) collapseMenu();
+    });
+
+    $("#selector").children("h3").first().on("click", function(){
+      if (menuCollapsed) restoreMenu();
+    });
+  });
+
+  var distanceHeader = $("#distance-header");
+  var lastDistance;
+
+  if (!Detector.webgl) Detector.addGetWebGLMessage();
+
+  var SURROUND_GEOMETRY = new THREE.SphereGeometry(1.0, 8, 8);
+  var ZERO = new THREE.Vector3(0, 0, 0);
+
+  var canvas = $("#webgl_canvas").get(0);
+  var scene = new THREE.Scene();
+
+  var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.0000000005, 10000);
+  camera.position.set(0, 0, -35);
+  camera.rotateZ(Math.PI);
+  camera.rotateY(Math.PI);
+
+  var intersectCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, .01, 10000);
+
+  var windowHalfX = window.innerWidth / 2;
+  var windowHalfY = window.innerHeight / 2;
+
+  var clock = new THREE.Clock();
+
+  var solMarker = new DynamicMarker(new THREE.Vector3(0, 0, 0), SOL_MARKER_RADIUS, 0x0000FF, 0);
+  var selector = new DynamicMarker(new THREE.Vector3(0, 0, 0), MARKER_RADIUS, 0x00b33c, Math.PI / 4);
+
+  var lineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, depthWrite: false });
+
+  var uniforms = { time: {type: "f", value: 1.0}, scale: {type: "f", value: 80} };
+
+  var lineSegment;
+  var tooltip;
+  var tooltipObject;
+  var font;
+
+  var mouseX;
+  var mouseY;
+  var mouseMoved = false;
+
+  var controlMode = '';
+  var highlightMode = 'none';
+
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, logarithmicDepthBuffer: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.autoClear = true;
+
+  var raycaster = new THREE.Raycaster();
+  var mouse = new THREE.Vector2();
+
+  var freeLookControls = new THREE.FreeLookControls(camera, canvas);
+  var orbitControls = new THREE.OrbitControls(camera, canvas);
+  var tweenControls = new THREE.TweenControls(camera);
+
+  var shaders = new Shaders();
+
+  var light = new THREE.AmbientLight(0x404040);
+  scene.add(light);
+
+  scene.add(camera);
+  scene.add(intersectCamera);
+  scene.add(solMarker.mesh);
+  scene.add(selector.mesh);
+
+  var starData;
+  var planetData;
+
+  var stars = [];
+  var starsByID = {};
+  var planetsByStarID = {};
+  var visibleStars = [];
+  var visibleStarsByName = {};
+  var renderRadius = 75;
+
+  // ✅ Travel stats
+  var totalTravelDistanceLy = 0;
+
+  // ✅ Session timing persistence
+  let sessionStartWallMs = Date.now();   // resets on load
+  let totalSessionMsAccum = 0;           // previous sessions loaded
+  function getTotalSessionMsSoFar(){
+    return totalSessionMsAccum + (Date.now() - sessionStartWallMs);
+  }
+
+  // ✅ Renames persistence map (primaryId -> name)
+  let renamedById = {};
+
+  var lastSelectedStarRaw = { x:0, y:0, z:0 };
+
+
+  // ✅ Map UUID tracking (comes from catalog JSON)
+  let currentMapUUID = null;
+
+  function extractMapUUID(catalogObj){
+    if (!catalogObj || typeof catalogObj !== "object") return null;
+
+    // ✅ NEW: your real field location
+    if (catalogObj.__meq_appendix && catalogObj.__meq_appendix.uuid) {
+      return catalogObj.__meq_appendix.uuid;
+    }
+
+    // older / alternate fallbacks
+    return (
+      catalogObj.uuid ||
+      catalogObj.mapUUID ||
+      catalogObj.catalogUUID ||
+      (catalogObj.meta && (catalogObj.meta.uuid || catalogObj.meta.mapUUID)) ||
+      null
+    );
+  }
+
+
+  // ✅ Reset ONLY session state (NOT catalog)
+  function resetSessionState(reason){
+    // travel + timing
+    totalTravelDistanceLy = 0;
+    totalSessionMsAccum = 0;
+    sessionStartWallMs = Date.now();
+
+    // renames + logs
+    renamedById = {};
+
+    visitedLog = [];
+    visitedById = {};
+
+    colonyLog = [];
+    colonyById = {};
+
+    homeworldLog = [];
+    homeworldById = {};
+
+    // clear any deferred load
+    pendingLoadedState = null;
+
+    // refresh UI
+    try { renderVisitedList(); } catch(e){}
+    try { renderColonyList(); } catch(e){}
+    try { renderHomeworldList(); } catch(e){}
+    try { updateCatalogStats(); } catch(e){}
+    try { updateThroneworldDisplay(); } catch(e){}
+
+    if (reason) console.log("Session reset:", reason);
+  }
+
+  
+  $("#jump_to_list").keydown(function (e) {
+    if (e.keyCode == 13) {
+      e.preventDefault();
+      select(visibleStarsByName[this.value]);
+    }
+  });
+
+  $("#render_radius").click(function () {
+    renderRadius = $('input[name=render_radius]:checked', '#render_radius').val();
+    updateobjectData();
+    updateCatalogStats();
+    updateNearestStarsList(currentObjectMesh);
+    renderVisitedList();
+    renderColonyList();
+    renderHomeworldList();
+    updateThroneworldDisplay();
+  });
+
+  $('#control_mode').click(function () {
+    controlMode = $('input[name=control_mode]:checked', '#control_mode').val();
+    updateTarget();
+  });
+
+  $("#highlight_mode").click(function () {
+    highlightMode = $('input[name=highlight_mode]:checked', '#highlight_mode').val();
+    stars.forEach(function (starMesh) { updateHighlight(starMesh); });
+  });
+
+  var HIGHLIGHT_MAP = new THREE.TextureLoader().load("images/highlight.png");
+  var SPRITE_MATERIAL = new THREE.SpriteMaterial({ map: HIGHLIGHT_MAP, depthWrite: false });
+
+  /* ===========================================================
+     ✅ Adaptive picking state (tiny star helper)
+     =========================================================== */
+  const BASE_PICK_PX = 10;
+  const MAX_EXTRA_PICK_PX = 22;
+  const PICK_GROW_PX_PER_SEC = 10;
+  const WIGGLE_PX_THRESH = 3;
+
+  let lastMoveT = performance.now();
+  let lastMoveX = 0;
+  let lastMoveY = 0;
+  let smallMoveTime = 0;
+
+  function updatePickState(x, y) {
+    const now = performance.now();
+    const dt = (now - lastMoveT) / 1000;
+    const dx = x - lastMoveX;
+    const dy = y - lastMoveY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist <= WIGGLE_PX_THRESH) {
+      smallMoveTime = Math.min(3, smallMoveTime + dt);
+    } else {
+      smallMoveTime = Math.max(0, smallMoveTime - dt*2);
+    }
+
+    lastMoveT = now;
+    lastMoveX = x;
+    lastMoveY = y;
+  }
+
+  function currentPickPx() {
+    const extra = Math.min(MAX_EXTRA_PICK_PX, smallMoveTime * PICK_GROW_PX_PER_SEC);
+    return BASE_PICK_PX + extra;
+  }
+
+  function pickByScreenDistance(objects, sx, sy, pickPx) {
+    let best = null;
+    let bestD = Infinity;
+
+    for (const s of objects) {
+      if (!s || !s.position || !s.objectData) continue;
+
+      const id = s.objectData.primaryId;
+      if (id === currentObjectPrimaryId) continue;
+      if (currentSystem && currentSystem.star && id === currentSystem.star.objectData.primaryId) continue;
+
+      const p = s.position.clone().project(camera);
+      if (p.z < -1 || p.z > 1) continue;
+
+      const px = (p.x * 0.5 + 0.5) * window.innerWidth;
+      const py = (-p.y * 0.5 + 0.5) * window.innerHeight;
+
+      const d = Math.hypot(px - sx, py - sy);
+      if (d <= pickPx && d < bestD) {
+        bestD = d;
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  function updateTarget(prevStarMesh) {
+    var prevControlMode = controlMode;
+    controlMode = 'tween';
+
+    var finalZoom = function (approachTime) {
+      return function () {
+        tweenControls.setZoom(
+          absolutePosition(currentObjectMesh),
+          currentObjectMesh.objectData.radius.value.quantity * 10,
+          approachTime,
+          function () {
+            if (currentSystem && isStar(currentObjectMesh) && currentObjectMesh.objectData.type === "STAR") {
+              currentSystem.populatePlanets();
+            }
+            if (isStar(prevStarMesh)) {
+              (prevStarMesh.objectData.nearbyObjectIDs || []).forEach(function (e) {
+                resetStarScale(starsByID[e]);
+              });
+            }
+            controlMode = (!prevControlMode || prevControlMode == 'tween') ? 'orbit' : prevControlMode;
+
+            orbitControls.orbit(
+              absolutePosition(currentObjectMesh),
+              currentObjectMesh.objectData.radius.value.quantity * 2
+            );
+          }
+        );
+      };
+    };
+
+    if (isStar(currentObjectMesh)) {
+      tweenControls.setZoom(absolutePosition(currentObjectMesh), MARKER_RADIUS, 2, finalZoom(1));
+    } else {
+      finalZoom(2)();
+    }
+  }
+
+  function updateTargetDrift(prevStarMesh) {
+    var prevControlMode = controlMode;
+    controlMode = 'tween';
+
+    const targetPos = absolutePosition(currentObjectMesh);
+    const orbitR = Math.max(10, renderRadius * 0.6);
+
+    tweenControls.setZoom(
+      targetPos,
+      orbitR,
+      1.5,
+      function () {
+        controlMode = 'orbit';
+        orbitControls.orbit(targetPos, orbitR);
+      }
+    );
+  }
+
+  function isStar(mesh) { return mesh && (mesh.objectData.type == "STAR" || mesh.objectData.type == "VIRTUAL_STAR"); }
+
+  var currentObjectPrimaryId = "";
+  var currentObjectMesh;
+  var currentSystem;
+
+  function reassignLabel(targetMesh) {
+    if (!tooltipObject || tooltipObject.objectData.primaryId == targetMesh.objectData.primaryId) return;
+    doReassign(targetMesh);
+  }
+
+  var labelCache = {};
+
+  function absolutePosition(mesh) {
+    scene.updateMatrixWorld();
+    var vector = new THREE.Vector3();
+    vector.setFromMatrixPosition(mesh.matrixWorld);
+    return vector;
+  }
+
+  function doReassign(targetMesh) {
+    tooltipObject = targetMesh;
+
+    scene.remove(lineSegment);
+    if (tooltip) scene.remove(tooltip.object);
+
+    var targetPos = absolutePosition(targetMesh);
+    var geometry = new THREE.Geometry();
+    var currentObjPosition = absolutePosition(currentObjectMesh);
+
+    geometry.vertices.push(currentObjPosition);
+    geometry.vertices.push(targetPos);
+    lineSegment = new THREE.Line(geometry, lineMaterial);
+
+    var lineDistance = currentObjectMesh ? currentObjectMesh.position.distanceTo(targetPos) : 0;
+    var label = targetMesh.objectData.properName || "Unnamed Star";
+    var cacheKey = label + lineDistance;
+
+    var radiusQuantity = (targetMesh.objectData.radius && targetMesh.objectData.radius.value && targetMesh.objectData.radius.value.quantity) || 0.01;
+
+    if (!labelCache[cacheKey]) {
+      labelCache[cacheKey] = new TooltipMarker(label, prettyDistance(lineDistance), radiusQuantity);
+    }
+
+    tooltip = labelCache[cacheKey];
+    tooltip.object.position.set(targetPos.x, targetPos.y, targetPos.z);
+
+    scene.add(lineSegment);
+    scene.add(tooltip.object);
+
+    tooltip.updateTo(camera);
+  }
+
+  function isRender(objectData) {
+    return objectData.solDistance.value.quantity < renderRadius;
+  }
+
+  function createHighlightSprite() {
+    const sp = new THREE.Sprite(SPRITE_MATERIAL);
+    sp.userData.isHighlight = true;
+    sp.name = "highlightSprite";
+    return sp;
+  }
+
+  function findHighlightChild(starMesh) {
+    if (!starMesh || !starMesh.children) return null;
+    return starMesh.children.find(c => c && c.userData && c.userData.isHighlight);
+  }
+
+  function updateHighlight(starMesh) {
+    const highlight = findHighlightChild(starMesh);
+
+    if (highlightMode === 'none' ||
+        (currentSystem && starMesh.objectData.primaryId === currentSystem.star.objectData.primaryId)) {
+      if (highlight) starMesh.remove(highlight);
+    } else if (highlightMode === 'exoplanets' && starMesh.objectData.type === "STAR") {
+      if (planetsByStarID[starMesh.objectData.primaryId] &&
+          planetsByStarID[starMesh.objectData.primaryId][0]) {
+        if (!highlight) starMesh.add(createHighlightSprite());
+      } else {
+        if (highlight) starMesh.remove(highlight);
+      }
+    } else if (highlightMode === 'all' || starMesh.objectData.type === "VIRTUAL_STAR") {
+      if (!highlight) starMesh.add(createHighlightSprite());
+    }
+  }
+
+  function updateobjectData() {
+    var renderedStars = {};
+    visibleStars.forEach(function (e) { renderedStars[e.objectData.primaryId] = true; });
+
+    visibleStars = [];
+    visibleStarsByName = {};
+    var nameList = [];
+
+    stars.forEach(function (starMesh) {
+      var data = starMesh.objectData;
+      var starID = data.primaryId;
+      var commonName = data.properName || ("Star " + starID);
+
+      nameList.push(commonName);
+      visibleStarsByName[commonName] = starMesh;
+
+      if (isRender(data)) {
+        visibleStars.push(starMesh);
+        if (!renderedStars[starID]) scene.add(starMesh);
+      } else {
+        if (renderedStars[starID]) {
+          scene.remove(starMesh);
+          renderedStars[starID] = null;
+        }
+      }
+    });
+
+    if (currentSystem == null) {
+      const defaultStar = starsByID[1] || stars[0];
+      if (defaultStar) {
+        select(defaultStar);
+        const labelStar = starsByID[70667] || stars[1] || defaultStar;
+        if (labelStar) reassignLabel(labelStar);
+      }
+    } else if (currentSystem && !renderedStars[currentSystem.star.primaryId]) {
+      const fallback = starsByID[1] || stars[0];
+      if (fallback) select(fallback);
+    }
+
+    $("#jump_to_list").autocomplete({ source: nameList, minLength: 4 });
+
+    updateCatalogStats();
+    renderVisitedList();
+    renderColonyList();
+    renderHomeworldList();
+    updateThroneworldDisplay();
+  }
+
+  function closestNonPrimaryObject(intersects, currentPrimary, currentStarPrimary) {
+    if (intersects.length == 0) return null;
+
+    var firstIntersect = intersects[0].object;
+    var firstIntersectId = firstIntersect.objectData.primaryId;
+
+    if (intersects.length == 1 && currentPrimary) {
+      if (firstIntersectId == currentStarPrimary) return firstIntersect;
+      if (firstIntersectId != currentPrimary) return firstIntersect;
+    }
+
+    var lookPoint = camera.position;
+    var min = Number.MAX_VALUE;
+    var best = null;
+
+    intersects.forEach(function (e) {
+      var screenDistance = e.object.position.distanceTo(e.point) / lookPoint.distanceTo(e.point);
+      var intersectId = e.object.objectData.primaryId;
+
+      if (screenDistance < min && intersectId != currentPrimary && intersectId != currentStarPrimary) {
+        best = e.object;
+        min = screenDistance;
+      }
+    });
+
+    return best;
+  }
+
+  function getStarForPoint(x, y) {
+    if (x && y) {
+      mouse.x = (x / window.innerWidth) * 2 - 1;
+      mouse.y = -(y / window.innerHeight) * 2 + 1;
+
+      intersectCamera.position.copy(camera.position);
+      intersectCamera.rotation.copy(camera.rotation);
+      raycaster.setFromCamera(mouse, intersectCamera);
+
+      if (currentSystem) {
+        var last = closestNonPrimaryObject(
+          raycaster.intersectObjects(currentSystem.selectable, false),
+          currentObjectPrimaryId,
+          currentSystem.star.objectData.primaryId
+        );
+        if (last) return currentSystem.objectsByID[last.objectData.primaryId];
+      }
+
+      // ✅ planet screen-distance fallback (fix click-through planets)
+      if (currentSystem && currentSystem.selectable) {
+        const maybePlanets = currentSystem.selectable.filter(o =>
+          o && o.objectData &&
+          o.objectData.type !== "STAR" &&
+          o.objectData.type !== "VIRTUAL_STAR"
+        );
+        if (maybePlanets.length) {
+          const pickPx = Math.max(8, currentPickPx() * 1.1);
+          const pb = pickByScreenDistance(maybePlanets, x, y, pickPx);
+          if (pb) return pb;
+        }
+      }
+
+      var allStars = visibleStars.concat(virtualStars);
+      var lastStar = closestNonPrimaryObject(
+        raycaster.intersectObjects(allStars, false),
+        currentObjectPrimaryId,
+        null
+      );
+
+      if (lastStar) return lastStar;
+
+      if (tooltip) {
+        var text = raycaster.intersectObjects(tooltip.scaleObj.children, false);
+        if (text.length > 0) return tooltipObject;
+      }
+
+      const pickPx = currentPickPx();
+      const fb = pickByScreenDistance(allStars, x, y, pickPx);
+      if (fb) return fb;
+    }
+    return null;
+  }
+
+  function setMouseXY(event) {
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+    mouseMoved = true;
+    updatePickState(mouseX, mouseY);
+  }
+
+  function consumeMouseMove() {
+    if (!mouseMoved) return false;
+    mouseMoved = false;
+    return true;
+  }
+
+  function getMouseoverStar() {
+    if (!freeLookControls.dragView && consumeMouseMove()) {
+      var object = getStarForPoint(mouseX, mouseY);
+      canvas.style.cursor = object ? 'pointer' : 'auto';
+      if (object) reassignLabel(object);
+    }
+  }
+
+  function onMouseClick(event) {
+    const diffX = Math.abs(mouseDownX - event.clientX);
+    const diffY = Math.abs(mouseDownY - event.clientY);
+    const delta = Math.sqrt(Math.pow(diffX, 2) + Math.pow(diffY, 2));
+    if (delta < 5) {
+      const clickedStar = getStarForPoint(event.clientX, event.clientY);
+      if (clickedStar) select(clickedStar);
+    }
+  }
+
+  // ✅ double-click anywhere on a star/planet opens visit details popup
+  function onMouseDoubleClick(event){
+    const obj = getStarForPoint(event.clientX, event.clientY);
+    if (obj && obj.objectData && obj.objectData.primaryId != null) {
+      openVisitDetails(String(obj.objectData.primaryId));
+    }
+  }
+
+  function initializeobjectData() {
+    starData.forEach(function (star) {
+      var tempQ = (star.temperatureEstimate && star.temperatureEstimate.value && star.temperatureEstimate.value.quantity) || 5000;
+
+      var shaderSurround = new THREE.ShaderMaterial({
+        vertexShader: shaders.coronaVertexShader,
+        fragmentShader: shaders.coronaFragmentShader,
+        uniforms: {
+          scale: {type: "f", value: 0.0},
+          temp: {type: "f", value: tempQ / 2}
+        },
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: .1,
+        usePolygonOffset: true
+      });
+
+      var surround = new THREE.Mesh(SURROUND_GEOMETRY, shaderSurround);
+      surround.objectData = star;
+      resetStarScale(surround);
+      updateHighlight(surround);
+
+      surround.position.x = star.cartesianCoordsInLys.x;
+      surround.position.y = star.cartesianCoordsInLys.y;
+      surround.position.z = star.cartesianCoordsInLys.z;
+
+      starsByID[star.primaryId] = surround;
+      stars.push(surround);
+      planetsByStarID[star.primaryId] = [];
+    });
+
+    planetData.forEach(function (planet) {
+      var star = planet.starId;
+      if (!planetsByStarID[star]) planetsByStarID[star] = [];
+      planetsByStarID[star].push(planet);
+    });
+
+    updateCatalogStats();
+  }
+
+  function setOffset(raw, current, offset) {
+    if (!raw || !offset || !current) return;
+    current.x = raw.x - offset.x;
+    current.y = raw.y - offset.y;
+    current.z = raw.z - offset.z;
+  }
+
+  function currentOffset(position) {
+    var pos = new THREE.Vector3();
+    pos.add(position);
+
+    if (currentSystem && currentSystem.star && currentSystem.star.objectData.cartesianCoordsInLys) {
+      pos.add(currentSystem.star.objectData.cartesianCoordsInLys);
+    } else if (lastSelectedStarRaw) {
+      pos.add(lastSelectedStarRaw);
+    }
+
+    return pos;
+  }
+
+  /* ===========================================================
+     ✅ Line-of-sight listing
+     =========================================================== */
+  const losListEl = document.getElementById("losList");
+  const LOS_CONE_ANGLE_RAD = 0.015;
+  const LOS_MAX_ITEMS = 14;
+
+  function updateLineOfSightList(targetMesh) {
+    if (!losListEl || !targetMesh) return;
+
+    const camPos = camera.position.clone();
+    const targetPos = targetMesh.position.clone();
+    const dir = targetPos.clone().sub(camPos);
+    const dirLen = dir.length();
+    if (dirLen < 1e-9) return;
+    dir.normalize();
+
+    const allStars = visibleStars.concat(virtualStars);
+
+    const hits = [];
+    for (const s of allStars) {
+      if (!s || !s.position || !s.objectData) continue;
+      if (s.objectData.primaryId === targetMesh.objectData.primaryId) continue;
+
+      const v = s.position.clone().sub(camPos);
+      const vLen = v.length();
+      if (vLen < 1e-9) continue;
+
+      const vNorm = v.clone().divideScalar(vLen);
+      let dot = vNorm.dot(dir);
+      dot = Math.max(-1, Math.min(1, dot));
+
+      const angle = Math.acos(dot);
+      if (angle <= LOS_CONE_ANGLE_RAD) {
+        const along = v.dot(dir);
+        hits.push({ mesh: s, along });
+      }
+    }
+
+    hits.sort((a,b) => a.along - b.along);
+
+    losListEl.innerHTML = "";
+    if (!hits.length) {
+      losListEl.innerHTML = '<div class="los-empty">No nearby stars along this sightline.</div>';
+      return;
+    }
+
+    hits.slice(0, LOS_MAX_ITEMS).forEach(h => {
+      const m = h.mesh;
+      const name = (m.objectData && m.objectData.properName) || ("Star " + m.objectData.primaryId);
+      const dist = prettyDistance(Math.abs(h.along));
+
+      const row = document.createElement("div");
+      row.className = "los-item";
+      row.dataset.primaryId = m.objectData.primaryId;
+
+      const n = document.createElement("span");
+      n.className = "los-name";
+      n.textContent = name;
+
+      const d = document.createElement("span");
+      d.className = "los-dist";
+      d.textContent = (h.along >= 0 ? "Ahead " : "Behind ") + dist;
+
+      row.appendChild(n);
+      row.appendChild(d);
+
+      row.onclick = () => {
+        const pid = row.dataset.primaryId;
+        const target = starsByID[pid] || allStars.find(s2 => String(s2.objectData.primaryId) === String(pid));
+        if (target) select(target);
+      };
+
+      losListEl.appendChild(row);
+    });
+  }
+
+  /* ===========================================================
+     ✅ Nearest stars listing (100 closest)
+     =========================================================== */
+  const nearestListEl = document.getElementById("nearestList");
+  const NEAREST_MAX_ITEMS = 100;
+
+  function prettyLy(lys) {
+    if (lys == null || isNaN(lys)) return "? ly";
+    return lys.toFixed(3) + " ly";
+  }
+
+  function getBaseStarForNearest(targetMesh) {
+    if (targetMesh && isStar(targetMesh)) return targetMesh;
+    if (currentSystem && currentSystem.star && isStar(currentSystem.star)) return currentSystem.star;
+    return null;
+  }
+
+  function updateNearestStarsList(targetMesh) {
+    if (!nearestListEl) return;
+
+    const baseStar = getBaseStarForNearest(targetMesh);
+    if (!baseStar) {
+      nearestListEl.innerHTML = '<div class="nearest-empty">Select a star to see nearest neighbors…</div>';
+      return;
+    }
+
+    const basePos = baseStar.position.clone();
+
+    const items = [];
+    for (const s of stars) {
+      if (!s || !s.position || !s.objectData) continue;
+      if (String(s.objectData.primaryId) === String(baseStar.objectData.primaryId)) continue;
+      if (s.objectData.type !== "STAR" && s.objectData.type !== "VIRTUAL_STAR") continue;
+      if (!isRender(s.objectData)) continue;
+
+      const d = basePos.distanceTo(s.position);
+      items.push({ mesh: s, dist: d });
+    }
+
+    items.sort((a,b) => a.dist - b.dist);
+
+    nearestListEl.innerHTML = "";
+    if (!items.length) {
+      nearestListEl.innerHTML = '<div class="nearest-empty">No other stars loaded.</div>';
+      return;
+    }
+
+    items.slice(0, NEAREST_MAX_ITEMS).forEach(it => {
+      const m = it.mesh;
+      const name = (m.objectData && m.objectData.properName) || ("Star " + m.objectData.primaryId);
+      const distStr = prettyLy(it.dist);
+
+      const row = document.createElement("div");
+      row.className = "nearest-item";
+      row.dataset.primaryId = m.objectData.primaryId;
+
+      const n = document.createElement("span");
+      n.className = "nearest-name";
+      n.textContent = name;
+
+      const d = document.createElement("span");
+      d.className = "nearest-dist";
+      d.textContent = distStr;
+
+      row.appendChild(n);
+      row.appendChild(d);
+
+      row.onclick = () => {
+        const pid = row.dataset.primaryId;
+        const target = starsByID[pid] || stars.find(s2 => String(s2.objectData.primaryId) === String(pid));
+        if (target) select(target);
+      };
+
+      nearestListEl.appendChild(row);
+    });
+  }
+
+  /* ===========================================================
+     ✅ Catalog / View Stats
+     =========================================================== */
+  const statStarsLoadedEl   = document.getElementById("statStarsLoaded");
+  const statPlanetsLoadedEl = document.getElementById("statPlanetsLoaded");
+  const statStarsVisibleEl  = document.getElementById("statStarsVisible");
+  const statPlanetsVisibleEl= document.getElementById("statPlanetsVisible");
+  const statVirtualStarsLoadedEl = document.getElementById("statVirtualStarsLoaded");
+  const statTotalDistanceLyEl = document.getElementById("statTotalDistanceLy");
+  const statAvgLyPerHourEl    = document.getElementById("statAvgLyPerHour");
+
+  function updateTravelStats() {
+    const elapsedHours = getTotalSessionMsSoFar() / 3600000;
+    const avg = elapsedHours > 0.000001 ? (totalTravelDistanceLy / elapsedHours) : 0;
+
+    if (statTotalDistanceLyEl) statTotalDistanceLyEl.textContent = prettyLy(totalTravelDistanceLy);
+    if (statAvgLyPerHourEl) statAvgLyPerHourEl.textContent = avg.toFixed(3) + " ly/h";
+  }
+
+  function updateCatalogStats() {
+    const starsLoaded = (starData && starData.length) ? starData.length : 0;
+    const planetsLoaded = (planetData && planetData.length) ? planetData.length : 0;
+    const virtualStarsLoaded = (virtualStars && virtualStars.length) ? virtualStars.length : 0;
+    const starsVisible = (visibleStars && visibleStars.length) ? visibleStars.length : 0;
+
+    let planetsVisible = 0;
+    if (visibleStars && visibleStars.length) {
+      visibleStars.forEach(function(s){
+        if (!s || !s.objectData) return;
+        const sid = s.objectData.primaryId;
+        const plist = planetsByStarID[sid];
+        if (plist && plist.length) planetsVisible += plist.length;
+      });
+    }
+
+    if (statStarsLoadedEl) statStarsLoadedEl.textContent = String(starsLoaded);
+    if (statVirtualStarsLoadedEl) statVirtualStarsLoadedEl.textContent = String(virtualStarsLoaded);
+    if (statPlanetsLoadedEl) statPlanetsLoadedEl.textContent = String(planetsLoaded);
+    if (statStarsVisibleEl) statStarsVisibleEl.textContent = String(starsVisible);
+    if (statPlanetsVisibleEl) statPlanetsVisibleEl.textContent = String(planetsVisible);
+
+    updateTravelStats();
+
+    renderVisitedList();
+    renderColonyList();
+    renderHomeworldList();
+    updateThroneworldDisplay();
+  }
+
+  /* ===========================================================
+     ✅ Lookups (no gating)
+     =========================================================== */
+  function resolveMeshByPrimaryId(pid){
+    pid = String(pid);
+    if (currentSystem && currentSystem.objectsByID && currentSystem.objectsByID[pid]) return currentSystem.objectsByID[pid];
+    if (starsByID[pid]) return starsByID[pid];
+    const allStars = stars.concat(virtualStars||[]);
+    const foundStar = allStars.find(s => s && s.objectData && String(s.objectData.primaryId) === pid);
+    if (foundStar) return foundStar;
+    return null;
+  }
+
+  function findPlanetDataByPrimaryId(pid){
+    pid = String(pid);
+    if (planetData && planetData.length) {
+      const direct = planetData.find(p => p && String(p.primaryId) === pid);
+      if (direct) return direct;
+    }
+    for (const sid in planetsByStarID) {
+      const arr = planetsByStarID[sid];
+      if (!arr || !arr.length) continue;
+      const f = arr.find(p => p && String(p.primaryId) === pid);
+      if (f) return f;
+    }
+    return null;
+  }
+
+  function findStarDataByPrimaryId(pid){
+    pid = String(pid);
+    if (starsByID[pid] && starsByID[pid].objectData) return starsByID[pid].objectData;
+    if (starData && starData.length) {
+      return starData.find(s => s && String(s.primaryId) === pid) || null;
+    }
+    return null;
+  }
+
+  function travelToPrimaryId(pid){
+    pid = String(pid);
+
+    const mesh = resolveMeshByPrimaryId(pid);
+    if (mesh) { select(mesh); return; }
+
+    // planet not locally meshed yet -> travel via its star, then planet
+    const pdata = findPlanetDataByPrimaryId(pid);
+    if (pdata && pdata.starId != null) {
+      const starId = String(pdata.starId);
+      const sMesh = starsByID[starId];
+      if (sMesh) {
+        select(sMesh);
+        setTimeout(function(){
+          const pm = resolveMeshByPrimaryId(pid);
+          if (pm) select(pm);
+        }, 450);
+      }
+    }
+  }
+
+  function travelToPlanetInSystem(planetPrimaryId, starPrimaryId){
+    planetPrimaryId = String(planetPrimaryId);
+    starPrimaryId = String(starPrimaryId);
+
+    const sMesh = starsByID[starPrimaryId];
+    if (!sMesh) return;
+
+    select(sMesh);
+    setTimeout(function(){
+      const pm = resolveMeshByPrimaryId(planetPrimaryId);
+      if (pm) select(pm);
+    }, 450);
+  }
+
+  /* ===========================================================
+     ✅ Visited Objects Log + Details Popup
+     =========================================================== */
+
+  const visitedListEl = document.getElementById("visitedList");
+  const hideVisitedStarsEl   = document.getElementById("hideVisitedStars");
+  const hideVisitedPlanetsEl = document.getElementById("hideVisitedPlanets");
+  const hideVisitedVirtualStarsEl = document.getElementById("hideVisitedVirtualStars");
+
+  let visitedLog = [];
+  let visitedById = {};
+
+  function getDisplayNameFromData(data){
+    if (!data) return "Unnamed Object";
+    return data.properName || data.name || ("Object " + data.primaryId);
+  }
+
+  // ✅ filter helper so nothing out-of-range hits any list
+function isEntryInRenderRange(entry){
+  if (!entry || entry.primaryId == null) return false;
+  const pid = String(entry.primaryId);
+
+// ✅ allow virtual stars using their own objectData
+if (entry.type === "VIRTUAL_STAR") {
+  // grab the currently-alive mesh if it exists
+  const m = resolveMeshByPrimaryId(pid) || entry.meshRef;
+  if (!m || !m.objectData) return false; // if it's not alive, it's not in range
+
+  const d = m.objectData.solDistance
+    ? m.objectData.solDistance.value.quantity
+    : null;
+
+  if (d != null && isFinite(d)) return d < renderRadius;
+
+  // fallback: compute from raw coords if solDistance missing
+  const c = m.objectData.cartesianCoordsInLys;
+  if (c) {
+    const dist = Math.sqrt(c.x*c.x + c.y*c.y + c.z*c.z);
+    return dist < renderRadius;
+  }
+
+  return true; // if we can't tell, don't hide it
+}
+
+
+  // stars: use solDistance from catalog
+  if (entry.isStar) {
+    const sdata = findStarDataByPrimaryId(pid);
+    if (!sdata || !sdata.solDistance) return false;
+    return (sdata.solDistance.value.quantity < renderRadius);
+  }
+
+  // planets: only show if their parent star is render-visible
+  const pdata = findPlanetDataByPrimaryId(pid);
+  const starId = (pdata && pdata.starId != null) ? String(pdata.starId)
+               : (entry.starId != null ? String(entry.starId) : null);
+  if (!starId) return false;
+
+  const sdata = findStarDataByPrimaryId(starId);
+  if (!sdata || !sdata.solDistance) return false;
+  return (sdata.solDistance.value.quantity < renderRadius);
+}
+
+
+  function computeLegLy(prevMesh, newMesh){
+    if (!prevMesh || !newMesh) return 0;
+    const a = getRawOf(prevMesh);
+    const b = getRawOf(newMesh);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dz = b.z - a.z;
+    const d = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    return isFinite(d) ? d : 0;
+  }
+
+function addVisitedEntry(mesh, legLy){
+  if (!mesh || !mesh.objectData) return;
+
+  const data = mesh.objectData;
+  const pid = String(data.primaryId);
+
+  // ✅ INCLUDE virtual stars as stars
+  const isStarType = (data.type === "STAR" || data.type === "VIRTUAL_STAR");
+
+  if (!visitedById[pid]) {
+    visitedById[pid] = {
+      primaryId: pid,
+      type: data.type || "OBJECT",
+      isStar: isStarType,
+      name: getDisplayNameFromData(data),
+      meshRef: mesh,
+      legLy: legLy || 0
+    };
+    visitedLog.push(visitedById[pid]);
+  } else {
+    visitedById[pid].name = getDisplayNameFromData(data);
+    visitedById[pid].meshRef = mesh;
+    visitedById[pid].legLy = legLy || visitedById[pid].legLy;
+    visitedById[pid].isStar = isStarType;
+    visitedById[pid].type = data.type || visitedById[pid].type;
+  }
+
+  renderVisitedList();
+}
+
+
+const hideVirtualStarsEl = document.getElementById("hideVisitedVirtualStars");
+
+function renderVisitedList(){
+  if (!visitedListEl) return;
+
+  const hideStars   = !!(hideVisitedStarsEl && hideVisitedStarsEl.checked);
+  const hidePlanets = !!(hideVisitedPlanetsEl && hideVisitedPlanetsEl.checked);
+  const hideVirtual = !!(hideVirtualStarsEl && hideVirtualStarsEl.checked);
+
+  visitedListEl.innerHTML = "";
+
+const filtered = visitedLog.filter(e => {
+  // ✅ don’t show anything outside render radius (safe for stars AND planets)
+  if (!isEntryInRenderRange(e)) return false;
+
+  // ✅ virtual stars: only show if they currently exist
+  if (e.type === "VIRTUAL_STAR") {
+    const live = resolveMeshByPrimaryId(e.primaryId);
+    if (!live) return false;           // hide if not spawned right now
+    e.meshRef = live;                  // refresh reference
+    e.name = getDisplayNameFromData(live.objectData); // refresh name if needed
+  }
+
+  if (e.isStar && hideStars) return false;
+  if (!e.isStar && hidePlanets) return false;
+
+  if (e.type === "VIRTUAL_STAR" && hideVirtual) return false;
+
+  return true;
+});
+
+
+    if (!filtered.length) {
+      visitedListEl.innerHTML = '<div class="visited-empty">No visits yet…</div>';
+      return;
+    }
+
+    filtered.forEach((e, idx) => {
+      const row = document.createElement("div");
+      row.className =
+        "visited-item " +
+        (e.isStar ? (e.type === "VIRTUAL_STAR" ? "virtual-item" : "star-item") : "planet-item");
+      row.dataset.primaryId = e.primaryId;
+
+      const n = document.createElement("span");
+      n.className = "visited-name";
+      n.textContent = (idx + 1) + ". " + e.name;
+
+      const d = document.createElement("span");
+      d.className = "visited-dist";
+      d.textContent = prettyLy(e.legLy);
+
+      row.appendChild(n);
+      row.appendChild(d);
+
+      row.onclick = () => openVisitDetails(e.primaryId);
+
+      visitedListEl.appendChild(row);
+    });
+  }
+
+  if (hideVisitedStarsEl) hideVisitedStarsEl.addEventListener("change", renderVisitedList);
+  if (hideVisitedPlanetsEl) hideVisitedPlanetsEl.addEventListener("change", renderVisitedList);
+  if (hideVisitedVirtualStarsEl) hideVisitedVirtualStarsEl.addEventListener("change", renderVisitedList);
+
+  /* ============================
+     Throneworld (Sol) display updater + click behavior
+     ============================ */
+  const throneworldItemEl = document.getElementById("throneworldItem");
+  const throneworldNameEl = document.getElementById("throneworldName");
+  const thronePlayEl = document.getElementById("thronePlay");
+
+  if (throneworldItemEl) {
+    throneworldItemEl.addEventListener("click", function(){
+      openVisitDetails("1");
+    });
+  }
+  if (thronePlayEl) {
+    thronePlayEl.addEventListener("click", function(ev){
+      ev.stopPropagation();
+      travelToPrimaryId("1");
+    });
+  }
+
+  function updateThroneworldDisplay(){
+    if (!throneworldNameEl) return;
+    const sdata = findStarDataByPrimaryId("1");
+    throneworldNameEl.textContent = sdata ? getDisplayNameFromData(sdata) : "Sol";
+  }
+
+  /* ============================
+     Colonies (planet-only)
+     ============================ */
+  const colonyListEl = document.getElementById("colonyList");
+  let colonyLog = [];
+  let colonyById = {};
+
+  function addColonyEntry(mesh){
+    if (!mesh || !mesh.objectData) return;
+    const data = mesh.objectData;
+    if (data.type === "STAR" || data.type === "VIRTUAL_STAR") return;
+
+    const pid = String(data.primaryId);
+    if (colonyById[pid] || homeworldById[pid]) return;
+
+    colonyById[pid] = {
+      primaryId: pid,
+      name: getDisplayNameFromData(data),
+      meshRef: mesh,
+      type: data.type || "PLANET",
+      starId: data.starId || null
+    };
+    colonyLog.push(colonyById[pid]);
+    renderColonyList();
+    renderHomeworldList();
+  }
+
+  function removeColony(pid){
+    pid = String(pid);
+    if (!colonyById[pid]) return;
+    colonyLog = colonyLog.filter(c => String(c.primaryId) !== pid);
+    delete colonyById[pid];
+  }
+
+  function renderColonyList(){
+    if (!colonyListEl) return;
+    colonyListEl.innerHTML = "";
+
+    const filtered = colonyLog.filter(e => isEntryInRenderRange(e));
+
+    if (!filtered.length){
+      colonyListEl.innerHTML = '<div class="colony-empty">No colonies yet…</div>';
+      return;
+    }
+
+    filtered.forEach((e, idx) => {
+      const row = document.createElement("div");
+      row.className = "colony-item";
+      row.dataset.primaryId = e.primaryId;
+
+      const play = document.createElement("span");
+      play.className = "travel-play";
+      play.textContent = "►";
+      play.title = "Travel";
+      play.onclick = (ev) => {
+        ev.stopPropagation();
+        travelToPrimaryId(e.primaryId);
+      };
+
+      const name = document.createElement("span");
+      name.className = "colony-name";
+      name.textContent = (idx + 1) + ". " + e.name;
+
+      row.appendChild(play);
+      row.appendChild(name);
+
+      row.onclick = () => openVisitDetails(e.primaryId);
+
+      colonyListEl.appendChild(row);
+    });
+  }
+
+  /* ============================
+     Homeworlds (planet-only)
+     ============================ */
+  const homeworldListEl = document.getElementById("homeworldList");
+  let homeworldLog = [];
+  let homeworldById = {};
+
+  function addHomeworldEntry(mesh){
+    if (!mesh || !mesh.objectData) return;
+    const data = mesh.objectData;
+    if (data.type === "STAR" || data.type === "VIRTUAL_STAR") return;
+
+    const pid = String(data.primaryId);
+    if (homeworldById[pid]) return;
+
+    if (colonyById[pid]) removeColony(pid);
+
+    homeworldById[pid] = {
+      primaryId: pid,
+      name: getDisplayNameFromData(data),
+      meshRef: mesh,
+      type: data.type || "PLANET",
+      starId: data.starId || null
+    };
+    homeworldLog.push(homeworldById[pid]);
+
+    renderColonyList();
+    renderHomeworldList();
+  }
+
+  function renderHomeworldList(){
+    if (!homeworldListEl) return;
+    homeworldListEl.innerHTML = "";
+
+    const filtered = homeworldLog.filter(e => isEntryInRenderRange(e));
+
+    if (!filtered.length){
+      homeworldListEl.innerHTML = '<div class="homeworld-empty">No homeworlds yet…</div>';
+      return;
+    }
+
+    filtered.forEach((e, idx) => {
+      const row = document.createElement("div");
+      row.className = "homeworld-item";
+      row.dataset.primaryId = e.primaryId;
+
+      const play = document.createElement("span");
+      play.className = "travel-play";
+      play.textContent = "►";
+      play.title = "Travel";
+      play.onclick = (ev) => {
+        ev.stopPropagation();
+        travelToPrimaryId(e.primaryId);
+      };
+
+      const name = document.createElement("span");
+      name.className = "homeworld-name";
+      name.textContent = (idx + 1) + ". " + e.name;
+
+      row.appendChild(play);
+      row.appendChild(name);
+
+      row.onclick = () => openVisitDetails(e.primaryId);
+
+      homeworldListEl.appendChild(row);
+    });
+  }
+
+  /* ============================
+     Visit Details Popup (NO gating)
+     ============================ */
+
+  const visitDetailsPopup   = document.getElementById("visitDetailsPopup");
+  const visitDetailsTitleEl = document.getElementById("visitDetailsTitle");
+  const visitDetailsCloseEl = document.getElementById("visitDetailsClose");
+  const visitDetailsContentEl = document.getElementById("visitDetailsContent");
+
+  const visitRenameInputEl  = document.getElementById("visitRenameInput");
+  const visitRenameBtnEl    = document.getElementById("visitRenameBtn");
+  const visitRenameMsgEl    = document.getElementById("visitRenameMsg");
+
+  const visitTravelBtnEl    = document.getElementById("visitTravelBtn");
+  const visitColonizeBtnEl  = document.getElementById("visitColonizeBtn");
+
+  let detailsTargetMesh = null;
+
+  function openVisitDetails(primaryId){
+    const pid = String(primaryId);
+
+    // ✅ prefer real mesh if exists
+    let mesh = resolveMeshByPrimaryId(pid);
+
+    // ✅ if no mesh, build a lightweight fake mesh from catalog data
+    if (!mesh) {
+      const pdata = findPlanetDataByPrimaryId(pid);
+      if (pdata) {
+        mesh = { objectData: pdata, position: new THREE.Vector3(0,0,0) };
+      } else {
+        const sdata = findStarDataByPrimaryId(pid);
+        if (sdata) {
+          mesh = { objectData: sdata, position: new THREE.Vector3(
+            sdata.cartesianCoordsInLys?.x || 0,
+            sdata.cartesianCoordsInLys?.y || 0,
+            sdata.cartesianCoordsInLys?.z || 0
+          )};
+        }
+      }
+    }
+
+    if (!mesh || !mesh.objectData) return;
+
+    detailsTargetMesh = mesh;
+    fillVisitDetails(mesh);
+
+    if (visitDetailsPopup) visitDetailsPopup.style.display = "block";
+  }
+
+  function closeVisitDetails(){
+    if (visitDetailsPopup) visitDetailsPopup.style.display = "none";
+    detailsTargetMesh = null;
+  }
+
+  if (visitDetailsCloseEl) visitDetailsCloseEl.addEventListener("click", closeVisitDetails);
+
+  function fillVisitDetails(mesh){
+    const data = mesh.objectData || {};
+    const title = getDisplayNameFromData(data);
+    const isStarType = (data.type === "STAR" || data.type === "VIRTUAL_STAR");
+
+    const pidStr = String(data.primaryId);
+
+    if (visitDetailsTitleEl) visitDetailsTitleEl.textContent = title;
+    if (visitRenameInputEl) visitRenameInputEl.value = title;
+    if (visitRenameMsgEl) visitRenameMsgEl.textContent = "";
+
+    if (visitTravelBtnEl) visitTravelBtnEl.disabled = false;
+
+    if (visitColonizeBtnEl) {
+      if (isStarType || pidStr === "1") {
+        visitColonizeBtnEl.style.display = "none";
+      } else {
+        visitColonizeBtnEl.style.display = "inline-block";
+        const inHomeworld = !!homeworldById[pidStr];
+        const inColony    = !!colonyById[pidStr];
+
+        if (inHomeworld) {
+          visitColonizeBtnEl.textContent = "Homeworld";
+          visitColonizeBtnEl.disabled = true;
+        } else if (inColony) {
+          visitColonizeBtnEl.textContent = "Make Homeworld";
+          visitColonizeBtnEl.disabled = false;
+        } else {
+          visitColonizeBtnEl.textContent = "Colonize";
+          visitColonizeBtnEl.disabled = false;
+        }
+      }
+    }
+
+    if (!visitDetailsContentEl) return;
+
+    let html = "";
+
+    if (isStarType) {
+      const plist = planetsByStarID[data.primaryId] || [];
+
+      html += `<div class="vd-section"><div class="vd-label">Type</div><div>${data.type}</div></div>`;
+      html += `<div class="vd-section"><div class="vd-label">Distance (Sol)</div><div>${getValue(data,'solDistance') || "Unknown"}</div></div>`;
+      html += `<div class="vd-section"><div class="vd-label">Planets in system</div><div>${plist.length}</div></div>`;
+
+      if (plist.length) {
+        html += `<div class="vd-subheader">Planets (click name for info, ► to travel)</div>`;
+        html += `<div class="vd-planets">`;
+
+        plist.forEach((p, i) => {
+          const pname = p.properName || p.name || (`Planet ${i+1}`);
+          const ptype = p.type || "PLANET";
+          const pid = p.primaryId != null ? String(p.primaryId) : "";
+
+          html += `
+            <div class="vd-planet-row" data-planet-id="${pid}" data-star-id="${data.primaryId}">
+              <div class="vd-planet-left">
+                <span class="travel-play vd-play" title="Travel">►</span>
+                <span class="vd-planet-name">${(i+1)}. ${pname}</span>
+              </div>
+              <span class="vd-planet-type">${ptype}</span>
+            </div>
+          `;
+
+          const mass = getValue(p, "massKg");
+          const dens = getValue(p, "densityGcc");
+          const orb  = getValue(p, "orbitalPeriodDays");
+          const sma  = getValue(p, "semiMajorAxisLys");
+
+          if ((mass && mass !== "Unknown") ||
+              (dens && dens !== "Unknown") ||
+              (orb  && orb  !== "Unknown") ||
+              (sma  && sma  !== "Unknown")) {
+
+            html += `<div class="vd-planet-stats">`;
+            if (mass && mass !== "Unknown") html += `<div>Mass: ${mass}</div>`;
+            if (dens && dens !== "Unknown") html += `<div>Density: ${dens}</div>`;
+            if (orb  && orb  !== "Unknown") html += `<div>Orbital Period: ${orb}</div>`;
+            if (sma  && sma  !== "Unknown") html += `<div>Semi-Major Axis: ${sma}</div>`;
+            html += `</div>`;
+          }
+        });
+
+        html += `</div>`;
+      }
+    } else {
+      html += `<div class="vd-section"><div class="vd-label">Type</div><div>${data.type || "PLANET"}</div></div>`;
+      html += `<div class="vd-section"><div class="vd-label">Name</div><div>${title}</div></div>`;
+
+      const fields = [
+        ["Mass", "massKg"],
+        ["Density", "densityGcc"],
+        ["Orbital Period", "orbitalPeriodDays"],
+        ["Semi-Major Axis", "semiMajorAxisLys"],
+        ["Inclination", "inclination"]
+      ];
+
+      fields.forEach(([lab, key]) => {
+        const val = getValue(data, key);
+        if (val && val !== "Unknown" && val !== "?") {
+          html += `<div class="vd-section"><div class="vd-label">${lab}</div><div>${val}</div></div>`;
+        }
+      });
+
+if (data.starId != null) {
+  const sdata = findStarDataByPrimaryId(String(data.starId));
+  if (sdata) {
+    const sid = String(sdata.primaryId);
+    const sname = getDisplayNameFromData(sdata);
+
+    html += `
+      <div class="vd-section">
+        <div class="vd-label">Parent Star</div>
+        <div>
+          <button class="vd-parent-star-btn" data-star-id="${sid}">
+            ◄ ${sname}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+    }
+
+    visitDetailsContentEl.innerHTML = html;
+
+    // ✅ Parent star "back" button
+const parentBtn = visitDetailsContentEl.querySelector(".vd-parent-star-btn");
+if (parentBtn) {
+  parentBtn.addEventListener("click", function(ev){
+    ev.stopPropagation();
+    const sid = parentBtn.dataset.starId;
+    if (sid) openVisitDetails(sid);   // swaps popup to star info
+  });
+}
+
+    
+    if (isStarType) {
+      const rows = visitDetailsContentEl.querySelectorAll(".vd-planet-row[data-planet-id]");
+      rows.forEach(r => {
+        const pid = r.dataset.planetId;
+        const sid = r.dataset.starId;
+
+        // ► play travels
+        const play = r.querySelector(".vd-play");
+        if (play) {
+          play.addEventListener("click", function(ev){
+            ev.stopPropagation();
+            if (pid) travelToPlanetInSystem(pid, sid);
+          });
+        }
+
+        // row click opens planet info page
+        r.addEventListener("click", function(){
+          if (pid) openVisitDetails(pid);
+        });
+      });
+    }
+  }
+
+  if (visitTravelBtnEl) {
+    visitTravelBtnEl.addEventListener("click", function(){
+      if (!detailsTargetMesh || !detailsTargetMesh.objectData) return;
+      travelToPrimaryId(detailsTargetMesh.objectData.primaryId);
+    });
+  }
+
+  if (visitColonizeBtnEl) {
+    visitColonizeBtnEl.addEventListener("click", function(){
+      if (!detailsTargetMesh || !detailsTargetMesh.objectData) return;
+      const pid = String(detailsTargetMesh.objectData.primaryId);
+      if (homeworldById[pid]) return;
+
+      // if fake mesh, try to resolve a real one for colonize/homeworld tracking
+      const realMesh = resolveMeshByPrimaryId(pid);
+      const meshToUse = realMesh || detailsTargetMesh;
+
+      if (colonyById[pid]) {
+        addHomeworldEntry(meshToUse);
+      } else {
+        addColonyEntry(meshToUse);
+      }
+      fillVisitDetails(detailsTargetMesh);
+    });
+  }
+
+  // Apply a rename to stars and planet data consistently
+  function applyRenameToData(pid, newName){
+    pid = String(pid);
+    if (!newName) return;
+
+    if (starsByID[pid] && starsByID[pid].objectData) {
+      starsByID[pid].objectData.properName = newName;
+      starsByID[pid].objectData.name = newName;
+    }
+
+    if (planetData && planetData.length) {
+      for (const p of planetData) {
+        if (p && String(p.primaryId) === pid) {
+          p.properName = newName;
+          p.name = newName;
+        }
+      }
+    }
+
+    for (const sid in planetsByStarID) {
+      const arr = planetsByStarID[sid];
+      if (!arr) continue;
+      for (const p of arr) {
+        if (p && String(p.primaryId) === pid) {
+          p.properName = newName;
+          p.name = newName;
+        }
+      }
+    }
+
+    if (currentSystem && currentSystem.objectsByID && currentSystem.objectsByID[pid]) {
+      currentSystem.objectsByID[pid].objectData.properName = newName;
+      currentSystem.objectsByID[pid].objectData.name = newName;
+    }
+  }
+
+  // Mock rename
+  if (visitRenameBtnEl) {
+    visitRenameBtnEl.addEventListener("click", function(){
+      if (!detailsTargetMesh || !detailsTargetMesh.objectData) return;
+
+      const newName = (visitRenameInputEl && visitRenameInputEl.value || "").trim();
+      if (!newName) return;
+
+      const data = detailsTargetMesh.objectData;
+      const pid  = String(data.primaryId);
+
+      applyRenameToData(pid, newName);
+
+      // ✅ persist rename in map
+      renamedById[pid] = newName;
+
+      if (currentObjectMesh && currentObjectMesh.objectData &&
+          String(currentObjectMesh.objectData.primaryId) === pid) {
+        $('#info-header').text(newName);
+      }
+
+      if (visitedById[pid]) visitedById[pid].name = newName;
+      if (colonyById[pid]) colonyById[pid].name = newName;
+      if (homeworldById[pid]) homeworldById[pid].name = newName;
+
+      if (data.type === "STAR" || data.type === "VIRTUAL_STAR") {
+        updateobjectData();
+      }
+
+      renderVisitedList();
+      renderColonyList();
+      renderHomeworldList();
+      updateThroneworldDisplay();
+      fillVisitDetails(detailsTargetMesh);
+
+      if (visitRenameMsgEl) {
+        visitRenameMsgEl.textContent =
+          "In the future renaming and buying an object will cost $NCZ tokens.";
+      }
+    });
+  }
+
+  $(function(){
+    $("#visitDetailsPopup").draggable({
+      handle: "#visitDetailsHeader",
+      containment: "window"
+    });
+  });
+
+  function select(mesh, opts) {
+    if (!mesh) return;
+    opts = opts || {};
+    const driftMode = !!opts.driftMode;
+
+    if (mesh && currentObjectMesh && isStar(mesh) && isStar(currentObjectMesh)) {
+      const prevRaw = getRawOf(currentObjectMesh);
+      const newRaw  = getRawOf(mesh);
+
+      const dx = newRaw.x - prevRaw.x;
+      const dy = newRaw.y - prevRaw.y;
+      const dz = newRaw.z - prevRaw.z;
+
+      const legDist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      if (isFinite(legDist) && legDist > 0) totalTravelDistanceLy += legDist;
+    }
+
+    var newTarget = mesh.objectData;
+
+    if (isStar(mesh) && !driftMode) {
+      var offset = mesh.objectData.cartesianCoordsInLys || { x:0, y:0, z:0 };
+      lastSelectedStarRaw = offset;
+
+      stars.forEach(function (e) {
+        if (e.objectData.cartesianCoordsInLys) setOffset(e.objectData.cartesianCoordsInLys, e.position, offset);
+      });
+      setOffset(currentOffset(camera.position), camera.position, offset);
+      setOffset(ZERO, solMarker.mesh.position, offset);
+    }
+
+    if (newTarget != null) {
+      var newTargetPrimaryId = newTarget.primaryId;
+      const legLyForVisit = computeLegLy(currentObjectMesh, mesh);
+
+      if (newTargetPrimaryId != currentObjectPrimaryId) {
+        $('#info-header').text(newTarget.properName);
+
+        var infoTable = $('#info-table');
+        infoTable.empty();
+
+        infoTable
+          .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Characteristics')))
+          .append(row("Radius", getValue(newTarget, 'radius')));
+
+        if (newTarget.type == "STAR" || newTarget.type == "VIRTUAL_STAR") {
+          infoTable
+            .append(row("Class", newTarget.rawStellarClassification || "Unknown"))
+            .append(row("Temperature", getValue(newTarget, 'temperatureEstimate') || "N/A"))
+            .append(row("Distance (Sol)", getValue(newTarget, 'solDistance') || "Unknown"))
+            .append(row("Right ascension", getValue(newTarget, 'rightAscensionRadians') || "Unknown"))
+            .append(row("Declination", getValue(newTarget, 'declinationRadians') || "Unknown"))
+            .append(row("Abs Magnitude", getValue(newTarget, 'absoluteMagnitude') || "Unknown"))
+            .append(row("", ""))
+            .append($('<tr></tr>').append($('<td class="overlay-header"></td>').text('Identifiers')))
+            .append(row("Proper Name", newTarget.properName || "Unnamed Star"))
+            .append(row("Hipparcos", (newTarget.identifiers && newTarget.identifiers.hipparcosId) || "Unknown"))
+            .append(row("Henry Draper", (newTarget.identifiers && newTarget.identifiers.henryDraperId) || "Unknown"))
+            .append(row("Harvard Revised", (newTarget.identifiers && newTarget.identifiers.harvardRevised) || "Unknown"))
+            .append(row("Gliese", (newTarget.identifiers && newTarget.identifiers.glieseId) || "Unknown"))
+            .append(row("Bayer Flamsteed", bfName(newTarget.identifiers && newTarget.identifiers.bayerFlamsteed) || "Unknown"));
+        } else {
+          infoTable
+            .append(row("Mass", getValue(newTarget, 'massKg') || "Unknown"))
+            .append(row("Density", getValue(newTarget, 'densityGcc') || "Unknown"))
+            .append(row("Orbital Period", getValue(newTarget, 'orbitalPeriodDays') || "Unknown"))
+            .append(row("Semi-Major axis", getValue(newTarget, 'semiMajorAxisLys') || "Unknown"))
+            .append(row("Semi-Minor axis", getValue(newTarget, 'semiMinorAxisLys') || "Unknown"))
+            .append(row("Inclination", getValue(newTarget, 'inclination') || "Unknown"))
+            .append(row("Lon asc node", getValue(newTarget, 'longAscendingNode') || "Unknown"))
+            .append(row("Arg periapsis", getValue(newTarget, 'argumentPeriapsis') || "Unknown"));
+        }
+
+        var prevTargetMesh = currentObjectMesh;
+        updateCurrentTargets(mesh);
+
+        if (driftMode) updateTargetDrift(prevTargetMesh);
+        else updateTarget(prevTargetMesh);
+
+        doReassign(currentObjectMesh);
+
+        updateLineOfSightList(currentObjectMesh);
+        updateNearestStarsList(currentObjectMesh);
+        updateCatalogStats();
+
+        addVisitedEntry(mesh, legLyForVisit);
+
+        renderVisitedList();
+        renderColonyList();
+        renderHomeworldList();
+        updateThroneworldDisplay();
+      }
+    }
+  }
+
+  function bfName(bayerFlamsteed) {
+    if (bayerFlamsteed) return bayerFlamsteed.prettyName;
+    return "";
+  }
+
+  function isSol(mesh) {
+    return mesh.objectData.primaryId == 1;
+  }
+
+  function updateCurrentTargets(mesh) {
+    currentObjectMesh = mesh;
+    currentObjectPrimaryId = mesh.objectData.primaryId;
+
+    if (isStar(mesh) && mesh.objectData.cartesianCoordsInLys) {
+      lastSelectedStarRaw = mesh.objectData.cartesianCoordsInLys;
+    }
+
+    if (mesh.objectData.type === "STAR") {
+      if (currentSystem && currentSystem.star.objectData.primaryId == mesh.objectData.primaryId) return;
+
+      var prevSystem = currentSystem;
+
+      currentSystem = new System(
+        mesh,
+        ZERO,
+        planetsByStarID[mesh.objectData.primaryId] || [],
+        solMarker.mesh.position
+      );
+
+      if (isSol(mesh)) currentSystem.object.rotateY(23.5 * Math.PI / 180);
+
+      if (prevSystem) {
+        updateHighlight(prevSystem.star);
+        scene.remove(prevSystem.object);
+      }
+
+      updateHighlight(currentSystem.star);
+      scene.add(currentSystem.object);
+      return;
+    }
+
+    if (mesh.objectData.type === "VIRTUAL_STAR") {
+      if (currentSystem) {
+        try {
+          updateHighlight(currentSystem.star);
+          scene.remove(currentSystem.object);
+        } catch(e){}
+        currentSystem = null;
+      }
+      updateHighlight(mesh);
+    }
+  }
+
+  function row(name, value) {
+    return $('<tr></tr>')
+      .append($('<td></td>').text(name))
+      .append($('<td></td>').text(value).addClass('info-element'));
+  }
+
+  function getValue(data, element) {
+    var elem = data[element];
+    if (!elem) return "Unknown";
+    if (!elem.source) return elem;
+    if (elem.source == "DEFAULT") return "?";
+    return formatObjValue(elem);
+  }
+
+  function formatObjValue(elem) {
+    var objValue = elem.value;
+    var quantity = objValue.quantity;
+
+    if (objValue.unit == 'LY') return prettyDistance(quantity);
+    if (objValue.unit == 'DAY') return quantity + ' days';
+    if (objValue.unit == 'KG') return prettyMass(quantity, elem.measurementQualifier);
+    if (objValue.unit == 'DEGREE_GEOM') return prettyDegree(quantity);
+    if (objValue.unit == 'RADIAN') return prettyDegree(quantity * 57.2958);
+    if (objValue.unit == 'MV') return prettyMagnitude(quantity);
+    if (objValue.unit == 'K') return prettyTemperature(quantity);
+    if (objValue.unit == 'G_PER_CC') return prettyDensity(quantity);
+    if (objValue.unit == 'NONE') return quantity;
+  }
+
+  function prettyDensity(gPerCc) { return gPerCc.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' g/cc'; }
+  function prettyTemperature(k) { return k.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'K'; }
+  function prettyMagnitude(mv) { return mv.toLocaleString('en-US', {maximumSignificantDigits: 3}) + 'Mv'; }
+  function prettyDegree(degrees) { return degrees.toLocaleString('en-US', {maximumSignificantDigits: 3}) + '°'; }
+  function prettyMass(mass, qualifier) {
+    var str = (mass / 5.9722e24).toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' M⊕';
+    if (qualifier == 'Msini') str += " (Msini)";
+    return str;
+  }
+  function prettyDistance(lys) {
+    if (lys > .01) return lys.toFixed(2) + ' ly';
+    var distKM = lys * 9.461e12;
+    var distAU = distKM / 1.496e8;
+    if (distAU > .01) return distAU.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' AU';
+    return distKM.toLocaleString('en-US', {maximumSignificantDigits: 3}) + ' km';
+  }
+
+  function onWindowResize() {
+    windowHalfX = window.innerWidth / 2;
+    windowHalfY = window.innerHeight / 2;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    render();
+  }
+
+  function animate() { render(); requestAnimationFrame(animate); }
+
+  function render() {
+    var delta = clock.getDelta();
+    uniforms.time.value += 0.003 * delta;
+
+    if (controlMode == 'orbit') orbitControls.update(delta);
+    else if (controlMode == 'free') freeLookControls.update(delta);
+    else if (controlMode == 'tween') tweenControls.update(delta);
+
+    getMouseoverStar();
+    if (tooltip) tooltip.updateTo(camera);
+
+    selector.updateTo(camera, delta);
+    solMarker.updateTo(camera, delta);
+
+    if (currentSystem) {
+      var currentStar = currentSystem.star;
+      if (currentStar) {
+        (currentStar.objectData.nearbyObjectIDs || []).forEach(function (e) {
+          var nearStar = starsByID[e];
+          if (!nearStar) return;
+          var distance = camera.position.distanceTo(nearStar.position) * .3;
+          var childUniform = nearStar.material && nearStar.material.uniforms;
+          if (!childUniform || !childUniform.scale) return;
+
+          if (childUniform.scale.value != distance) {
+            var scale = Math.min(distance, nearStar.objectData.radius.value.quantity * 3000000);
+            setStarScale(nearStar, scale);
+          }
+        });
+      }
+
+      var newDistance = prettyDistance(camera.position.distanceTo(currentObjectMesh.position));
+      if (lastDistance != newDistance) {
+        lastDistance = newDistance;
+        distanceHeader.text(newDistance);
+      }
+    }
+    maybeDrawMinimap();
+
+    updateTravelStats();
+    renderer.render(scene, camera);
+  }
+
+  function setStarScale(star, scale) {
+    if (star.material && star.material.uniforms && star.material.uniforms.scale) {
+      star.material.uniforms.scale.value = scale;
+    }
+    star.scale.x = star.scale.y = star.scale.z = scale;
+  }
+
+  function resetStarScale(star) {
+    const rQ = (star.objectData &&
+               star.objectData.radius &&
+               star.objectData.radius.value &&
+               star.objectData.radius.value.quantity) || 7.5e-8;
+
+    if (star.material && star.material.uniforms && star.material.uniforms.scale) {
+      star.material.uniforms.scale.value = rQ * 3000000;
+    }
+
+    var scale = 7.35355e-8 * 8000000;
+    star.scale.set(scale, scale, scale);
+  }
+
+  canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); }, false);
+  canvas.addEventListener('mousemove', bind(orbitControls.onMouseMove, freeLookControls.onMouseMove), false);
+  canvas.addEventListener('mousedown', bind(orbitControls.onMouseDown, freeLookControls.onMouseDown), false);
+  canvas.addEventListener('mousewheel', bind(orbitControls.onMouseWheel, freeLookControls.onMouseWheel), false);
+  canvas.addEventListener('DOMMouseScroll', bind(orbitControls.onMouseWheel, freeLookControls.onMouseWheel), false);
+  canvas.addEventListener('mouseup', bind(orbitControls.onMouseUp, freeLookControls.onMouseUp), false);
+  canvas.addEventListener('keydown', bind(orbitControls.onKeyDown, freeLookControls.onKeyDown), false);
+  canvas.addEventListener('keyup', bind(orbitControls.onKeyUp, freeLookControls.onKeyUp), false);
+
+  function bind(orbitFn, freeFn) {
+    return function () {
+      if (controlMode === 'free') freeFn.apply(freeLookControls, arguments);
+      else if (controlMode === 'orbit') orbitFn.apply(orbitControls, arguments);
+    };
+  }
+
+  var mouseDownX = 0;
+  var mouseDownY = 0;
+  function setmouseDown(event) { mouseDownX = event.clientX; mouseDownY = event.clientY; }
+
+  window.addEventListener('resize', onWindowResize, false);
+  canvas.addEventListener('mousemove', setMouseXY, false);
+  canvas.addEventListener('mousedown', setmouseDown, false);
+  canvas.addEventListener('mouseup', onMouseClick, false);
+  canvas.addEventListener('dblclick', onMouseDoubleClick, false);
+
+  var loader = new THREE.FontLoader();
+
+  // ========= Catalog helpers (NO caching) =========
+  const catalogStatusEl  = document.getElementById("catalogStatus");
+  const loadCatalogBtn   = document.getElementById("loadCatalogBtn");
+  const clearCatalogBtn  = document.getElementById("clearCatalogBtn");
+  const catalogFileInput = document.getElementById("catalogFileInput");
+  const starmapListEl    = document.getElementById("starmapList");
+
+  const STARMAP_INDEX_URL = "https://xtdevelopment.net/chat-proxy/starmaps/starmaps.php";
+  // ✅ remember last loaded catalog for saving
+let lastCatalogURL = DEFAULT_CATALOG_URL;
+let lastCatalogLabel = "server_catalog";
+  // ✅ cache the exact catalog file text we got from server/local
+let lastCatalogRawText = null;
+let lastCatalogRawURL  = null;
+
+  let mapAlive = false;
+
+  function getHashCatalogURL() {
+    if (!window.location.hash) return null;
+    const raw = window.location.hash.substring(1).trim();
+    if (!raw) return null;
+    const decoded = decodeURIComponent(raw);
+    if (/^https?:\/\//i.test(decoded)) return decoded;
+    return null;
+  }
+
+  function prettyBytes(bytes) {
+    if (bytes == null) return "";
+    const units = ["B","KB","MB","GB","TB"];
+    let b = bytes, i = 0;
+    while (b >= 1024 && i < units.length-1) { b /= 1024; i++; }
+    const digits = (i === 0) ? 0 : 1;
+    return b.toFixed(digits) + units[i];
+  }
+
+  function renameSolIfCustom(catalogObj) {
+    if (!catalogObj || !Array.isArray(catalogObj.stars)) return catalogObj;
+    const rand = Math.floor(Math.floor(Math.random() * 900000) + 100000);
+    catalogObj.stars.forEach(function(s){
+      if (String(s.primaryId) === "1") {
+        s.properName = "Virtual Sol Outpost " + rand;
+      }
+    });
+    return catalogObj;
+  }
+
+  function resetCatalogScene() {
+    try { if (tooltip) { scene.remove(tooltip.object); tooltip = null; } } catch(e){}
+    try { if (lineSegment) { scene.remove(lineSegment); lineSegment = null; } } catch(e){}
+    try { removeVirtualStars(); } catch(e){}
+
+    if (currentSystem) {
+      try { scene.remove(currentSystem.object); } catch(e){}
+      currentSystem = null;
+    }
+
+    stars.forEach(function (s) { try { scene.remove(s); } catch(e){} });
+
+    stars = [];
+    starsByID = {};
+    planetsByStarID = {};
+    visibleStars = [];
+    visibleStarsByName = {};
+    currentObjectMesh = null;
+    currentObjectPrimaryId = "";
+  }
+
+  function validateCatalogObject(obj) {
+    if (!obj || typeof obj !== "object") throw new Error("Catalog is not an object.");
+    if (!Array.isArray(obj.stars)) throw new Error("Catalog missing stars[] array.");
+    if (!obj.planets) obj.planets = [];
+
+    obj.stars.forEach(function(s, idx){
+      if (typeof s.primaryId === "undefined") s.primaryId = idx + 1;
+      if (!s.type) s.type = "STAR";
+      if (!s.properName) s.properName = "Star " + s.primaryId;
+      if (!s.cartesianCoordsInLys) s.cartesianCoordsInLys = { x:0, y:0, z:0 };
+      if (!s.radius) {
+        s.radius = { source:"INFERRED", value:{ unit:"LY", quantity:7.5e-8 } };
+      }
+      if (!s.solDistance) {
+        var d = Math.sqrt(
+          s.cartesianCoordsInLys.x*s.cartesianCoordsInLys.x +
+          s.cartesianCoordsInLys.y*s.cartesianCoordsInLys.y +
+          s.cartesianCoordsInLys.z*s.cartesianCoordsInLys.z
+        );
+        s.solDistance = { source:"INFERRED", value:{ unit:"LY", quantity:d } };
+      }
+      if (!s.temperatureEstimate) {
+        s.temperatureEstimate = { source:"DEFAULT", value:{ unit:"K", quantity:5000 } };
+      }
+      if (!s.nearbyObjectIDs) s.nearbyObjectIDs = [];
+      if (!s.identifiers) s.identifiers = {};
+    });
+
+    return obj;
+  }
+
+  function applyCatalogObject(parsed, isCustom) {
+    // ✅ pull UUID from the loaded map JSON
+    currentMapUUID = extractMapUUID(parsed);
+    if (!currentMapUUID) {
+      console.warn("Catalog has no UUID field. Session UUID checks will fail-safe.");
+    }
+
+    if (!mapAlive) {
+      starData   = parsed.stars || [];
+      planetData = parsed.planets || [];
+      return;
+    }
+
+    // ✅ any map load nukes ALL session state first
+    resetSessionState("map-load");
+
+    resetCatalogScene();
+
+    starData   = parsed.stars || [];
+    planetData = parsed.planets || [];
+
+    initializeobjectData();
+    updateobjectData();
+
+    if (catalogStatusEl) {
+      catalogStatusEl.style.color = "#8f8";
+      catalogStatusEl.textContent =
+        "Loaded catalog (" + starData.length + " stars, " + planetData.length + " planets)." +
+        (isCustom ? " (custom)" : "");
+    }
+
+    updateNearestStarsList(currentObjectMesh);
+    updateCatalogStats();
+    renderVisitedList();
+    renderColonyList();
+    renderHomeworldList();
+    updateThroneworldDisplay();
+  }
+
+
+  function cacheBust(url) {
+    const ts = Date.now();
+    return url + (url.indexOf("?") === -1 ? "?" : "&") + "ts=" + ts;
+  }
+
+  function loadCatalogFromURL(url, isCustom) {
+      // ✅ track last loaded catalog
+  lastCatalogURL = url;
+  try {
+    lastCatalogLabel = (url.split("/").pop() || "catalog").replace(/\?.*$/,"");
+  } catch(e) {
+    lastCatalogLabel = "catalog";
+  }
+    if (catalogStatusEl) {
+      catalogStatusEl.style.color = "#ffb";
+      catalogStatusEl.textContent = "Loading catalog...";
+    }
+
+    return $.ajax({
+      type: "GET",
+      dataType: "text",
+      cache: false,
+      url: cacheBust(url),
+      success: function (data) {
+        try {
+              // ✅ store EXACT raw text from server (unchanged)
+    lastCatalogRawText = data;
+    lastCatalogRawURL  = url;
+          var obj = JSON.parse(data);
+
+          if (isCustom) obj = renameSolIfCustom(obj);
+
+          var parsed = validateCatalogObject(obj);
+          applyCatalogObject(parsed, !!isCustom);
+
+          if (!isCustom && catalogStatusEl && mapAlive) {
+            catalogStatusEl.style.color = "#cfcfcf";
+            catalogStatusEl.textContent = "Using server catalog.";
+          }
+        } catch (e) {
+          if (catalogStatusEl) {
+            catalogStatusEl.style.color = "#f88";
+            catalogStatusEl.textContent = "Invalid catalog JSON.";
+          }
+        }
+      },
+      error: function () {
+        if (catalogStatusEl) {
+          catalogStatusEl.style.color = "#f88";
+          catalogStatusEl.textContent = "Catalog failed to load.";
+        }
+      }
+    });
+  }
+
+  if (loadCatalogBtn && catalogFileInput) {
+    loadCatalogBtn.addEventListener("click", function() {
+      catalogFileInput.value = "";
+      catalogFileInput.click();
+    });
+
+    catalogFileInput.addEventListener("change", function(ev) {
+      var file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+
+        // ✅ track last loaded catalog (local file)
+  lastCatalogURL = null;
+  lastCatalogLabel = file.name || "local_catalog";
+
+      var reader = new FileReader();
+      reader.onload = function() {
+        try {
+          var raw = reader.result;
+              // ✅ store EXACT raw text from local file too
+    lastCatalogRawText = raw;
+    lastCatalogRawURL  = "local-file";
+
+          var obj = JSON.parse(raw);
+          obj = renameSolIfCustom(obj);
+          var parsed = validateCatalogObject(obj);
+          applyCatalogObject(parsed, true);
+        } catch(e) {
+          if (catalogStatusEl) {
+            catalogStatusEl.style.color = "#f88";
+            catalogStatusEl.textContent = "Invalid catalog JSON: " + e.message;
+          }
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  if (clearCatalogBtn) {
+    clearCatalogBtn.addEventListener("click", function () {
+      if (history && history.replaceState) {
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+      loadCatalogFromURL(DEFAULT_CATALOG_URL, false);
+    });
+  }
+
+  function refreshStarmapList() {
+    if (!starmapListEl) return;
+    starmapListEl.innerHTML = '<div style="color:#888;">Loading list...</div>';
+
+    fetch(cacheBust(STARMAP_INDEX_URL), { cache: "no-store" })
+      .then(function(r){ return r.json(); })
+      .then(function(items){
+        starmapListEl.innerHTML = "";
+
+        if (!items || !items.length) {
+          starmapListEl.innerHTML = '<div style="color:#888;">No starmaps found.</div>';
+          return;
+        }
+
+        items.forEach(function(it){
+          var url  = (typeof it === "string") ? it : it.url;
+          var name = (typeof it === "string")
+            ? (it.split("/").pop())
+            : (it.name || (url ? url.split("/").pop() : "unknown.txt"));
+          var size = (typeof it === "string") ? "" : prettyBytes(it.size);
+
+          if (!url) return;
+
+          var row = document.createElement("div");
+          row.className = "starmap-item";
+          row.innerHTML =
+            '<span class="starmap-name"></span>' +
+            '<span class="starmap-size"></span>';
+
+          row.querySelector(".starmap-name").textContent = name;
+          row.querySelector(".starmap-size").textContent = size;
+
+          row.dataset.url = url;
+          row.onclick = function(){ loadCatalogFromURL(url, true); };
+
+          starmapListEl.appendChild(row);
+        });
+      })
+      .catch(function(){
+        starmapListEl.innerHTML = '<div style="color:#f88;">Failed to load list.</div>';
+      });
+  }
+
+  function loadInitialCatalog() {
+    var hashURL = getHashCatalogURL();
+    if (hashURL) return loadCatalogFromURL(hashURL, true);
+    return loadCatalogFromURL(DEFAULT_CATALOG_URL, false);
+  }
+
+  $.when(
+    loadInitialCatalog(),
+    shaders.loaders()
+  ).then(function () {
+    loader.load('js/font.js', function (response) {
+      font = response;
+      initializeobjectData();
+      animate();
+      updateobjectData();
+
+      mapAlive = true;
+      refreshStarmapList();
+
+      updateCatalogStats();
+      updateNearestStarsList(currentObjectMesh);
+      updateThroneworldDisplay();
+
+      if (pendingLoadedState) applyLoadedStateNow(pendingLoadedState);
+    });
+  });
+
+  window.addEventListener("hashchange", function() {
+    var hashURL = getHashCatalogURL();
+    if (hashURL) loadCatalogFromURL(hashURL, true);
+    else loadCatalogFromURL(DEFAULT_CATALOG_URL, false);
+  });
+
+  // Auto Explore
+  let autoExploreMode = false;
+  let autoExploreInterval;
+
+  function toggleAutoExplore() {
+    autoExploreMode = !autoExploreMode;
+
+    if (autoExploreMode) {
+      document.getElementById("autoExploreButton").innerText = "Stop Auto Explore";
+      startAutoExplore();
+    } else {
+      document.getElementById("autoExploreButton").innerText = "Start Auto Explore";
+      stopAutoExplore();
+    }
+  }
+
+  function startAutoExplore() {
+    autoExploreInterval = setInterval(function(){
+      const randomStar = getRandomVisibleStar();
+      if (randomStar) select(randomStar);
+    }, getRandomInterval(7000, 13000));
+  }
+
+  function stopAutoExplore() { clearInterval(autoExploreInterval); }
+
+  function getRandomVisibleStar() {
+    const allStars = visibleStars.concat(virtualStars);
+    return allStars[Math.floor(Math.random() * allStars.length)];
+  }
+
+  function getRandomInterval(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  document.getElementById("autoExploreButton").addEventListener("click", toggleAutoExplore);
+
+  /* ===========================================================
+     ✅ 2D Minimap (unchanged)
+     =========================================================== */
+
+  let minimapOpen = false;
+  let minimapZoom = 1.0;
+  const MINIMAP_ZOOM_MIN = 0.25;
+  const MINIMAP_ZOOM_MAX = 20.0;
+  const MINIMAP_BASE_PX_PER_LY = 4.0;
+
+  let minimapPlaneIndex = 0;
+  const minimapPlanes = [
+    { key:"XY", a:"x", b:"y" },
+    { key:"XZ", a:"x", b:"z" },
+    { key:"YZ", a:"y", b:"z" }
+  ];
+
+  const minimapPopup  = document.getElementById("minimapPopup");
+  const minimapCanvas = document.getElementById("minimapCanvas");
+  const mmCtx         = minimapCanvas ? minimapCanvas.getContext("2d") : null;
+  const axisLabelEl   = document.getElementById("minimapAxisLabel");
+
+  const minimapHoverNameEl = document.getElementById("minimapHoverName");
+  const minimapHoverDistEl = document.getElementById("minimapHoverDist");
+  let minimapHoverPid = null;
+
+  function getRawOf(mesh){
+    if (!mesh) return {x:0,y:0,z:0};
+    const c = mesh.objectData && mesh.objectData.cartesianCoordsInLys;
+    if (c) return c;
+    return {
+      x: mesh.position.x + (lastSelectedStarRaw?.x || 0),
+      y: mesh.position.y + (lastSelectedStarRaw?.y || 0),
+      z: mesh.position.z + (lastSelectedStarRaw?.z || 0)
+    };
+  }
+
+  function getMinimapCenterRaw(){
+    if (currentObjectMesh && currentObjectMesh.objectData && currentObjectMesh.objectData.cartesianCoordsInLys) {
+      return currentObjectMesh.objectData.cartesianCoordsInLys;
+    }
+    if (currentSystem && currentSystem.star && currentSystem.star.objectData.cartesianCoordsInLys) {
+      return currentSystem.star.objectData.cartesianCoordsInLys;
+    }
+    return {x:0,y:0,z:0};
+  }
+
+  function drawMinimap(){
+    if (!minimapOpen || !mmCtx || !minimapCanvas) return;
+
+    const w = minimapCanvas.width;
+    const h = minimapCanvas.height;
+
+    mmCtx.clearRect(0,0,w,h);
+    mmCtx.fillStyle = "rgba(0,0,0,0.92)";
+    mmCtx.fillRect(0,0,w,h);
+
+    const plane  = minimapPlanes[minimapPlaneIndex];
+    const center = getMinimapCenterRaw();
+    const pxPerLy = MINIMAP_BASE_PX_PER_LY * minimapZoom;
+
+    const fitLy = Math.min(w,h) / (2 * pxPerLy);
+    const displayRadiusLy = Math.min(renderRadius * 1.05, fitLy);
+
+    mmCtx.save();
+    mmCtx.translate(w/2, h/2);
+    mmCtx.strokeStyle = "rgba(255,255,255,0.10)";
+    mmCtx.beginPath();
+    mmCtx.arc(0,0,displayRadiusLy * pxPerLy,0,Math.PI*2);
+    mmCtx.stroke();
+
+    const all = stars.concat(virtualStars || []);
+
+    for (const s of all) {
+      if (!s || !s.objectData) continue;
+      const data = s.objectData;
+      if (data.type !== "STAR" && data.type !== "VIRTUAL_STAR") continue;
+      if (!isRender(data)) continue;
+
+      const raw = getRawOf(s);
+      const dx = raw[plane.a] - center[plane.a];
+      const dy = raw[plane.b] - center[plane.b];
+
+      if ((dx*dx + dy*dy) > displayRadiusLy*displayRadiusLy) continue;
+
+      const x = dx * pxPerLy;
+      const y = -dy * pxPerLy;
+
+      const isCurrent =
+        currentObjectMesh &&
+        currentObjectMesh.objectData &&
+        String(currentObjectMesh.objectData.primaryId) === String(data.primaryId);
+
+      mmCtx.fillStyle = isCurrent
+        ? "rgba(0,255,120,0.95)"
+        : (data.type === "VIRTUAL_STAR"
+            ? "rgba(255,255,255,0.55)"
+            : "rgba(150,180,255,0.80)");
+
+      const r = isCurrent ? 3.5 : 1.6;
+      mmCtx.beginPath();
+      mmCtx.arc(x, y, r, 0, Math.PI*2);
+      mmCtx.fill();
+    }
+
+    mmCtx.restore();
+
+    if (axisLabelEl) axisLabelEl.textContent = plane.key;
+  }
+
+  let lastMinimapDrawT = 0;
+  function maybeDrawMinimap(){
+    if (!minimapOpen) return;
+    const now = performance.now();
+    if (now - lastMinimapDrawT > 200) {
+      lastMinimapDrawT = now;
+      drawMinimap();
+    }
+  }
+
+  function clearMinimapHover(){
+    minimapHoverPid = null;
+    if (minimapHoverNameEl) minimapHoverNameEl.textContent = "Hover a star…";
+    if (minimapHoverDistEl) minimapHoverDistEl.textContent = "";
+    if (minimapCanvas) minimapCanvas.style.cursor = "default";
+  }
+
+  function updateMinimapHover(ev){
+    if (!minimapOpen || !minimapCanvas) return;
+
+    const rect = minimapCanvas.getBoundingClientRect();
+    const cx = ev.clientX - rect.left - rect.width/2;
+    const cy = ev.clientY - rect.top  - rect.height/2;
+
+    const plane  = minimapPlanes[minimapPlaneIndex];
+    const center = getMinimapCenterRaw();
+    const pxPerLy = MINIMAP_BASE_PX_PER_LY * minimapZoom;
+
+    const allStars = visibleStars.concat(virtualStars || []);
+    let best = null;
+    let bestPx = Infinity;
+
+    for (const s of allStars) {
+      if (!s || !s.objectData) continue;
+      if (!isRender(s.objectData)) continue;
+
+      const raw = getRawOf(s);
+      const sx = (raw[plane.a] - center[plane.a]) * pxPerLy;
+      const sy = -(raw[plane.b] - center[plane.b]) * pxPerLy;
+
+      const d = Math.hypot(sx - cx, sy - cy);
+      if (d < bestPx) { bestPx = d; best = s; }
+    }
+
+    const HOVER_THRESH_PX = 8;
+
+    if (best && bestPx <= HOVER_THRESH_PX) {
+      const pid = String(best.objectData.primaryId);
+      if (pid !== minimapHoverPid) {
+        minimapHoverPid = pid;
+        const name = best.objectData.properName || ("Star " + pid);
+
+        const raw = getRawOf(best);
+        const dx3 = raw.x - center.x;
+        const dy3 = raw.y - center.y;
+        const dz3 = raw.z - center.z;
+        const dist3 = Math.sqrt(dx3*dx3 + dy3*dy3 + dz3*dz3);
+
+        if (minimapHoverNameEl) minimapHoverNameEl.textContent = name;
+        if (minimapHoverDistEl) minimapHoverDistEl.textContent = prettyLy(dist3);
+      }
+      minimapCanvas.style.cursor = "pointer";
+    } else {
+      clearMinimapHover();
+    }
+  }
+
+  if (minimapCanvas) {
+    minimapCanvas.addEventListener("click", function(ev){
+      if (!minimapOpen) return;
+
+      const rect = minimapCanvas.getBoundingClientRect();
+      const cx = ev.clientX - rect.left - rect.width/2;
+      const cy = ev.clientY - rect.top  - rect.height/2;
+
+      const plane  = minimapPlanes[minimapPlaneIndex];
+      const center = getMinimapCenterRaw();
+      const pxPerLy = MINIMAP_BASE_PX_PER_LY * minimapZoom;
+
+      const allStars = visibleStars.concat(virtualStars || []);
+      let best = null;
+      let bestPx = Infinity;
+
+      for (const s of allStars) {
+        if (!s || !s.objectData) continue;
+        if (!isRender(s.objectData)) continue;
+
+        const raw = getRawOf(s);
+        const sx = (raw[plane.a] - center[plane.a]) * pxPerLy;
+        const sy = -(raw[plane.b] - center[plane.b]) * pxPerLy;
+
+        const d = Math.hypot(sx - cx, sy - cy);
+        if (d < bestPx) { bestPx = d; best = s; }
+      }
+
+      const CLICK_THRESH_PX = 6;
+      if (best && bestPx <= CLICK_THRESH_PX) {
+        select(best);
+        drawMinimap();
+      }
+    });
+
+    minimapCanvas.addEventListener("mousemove", updateMinimapHover);
+    minimapCanvas.addEventListener("mouseleave", clearMinimapHover);
+  }
+
+  const toggleMinimapBtn = document.getElementById("toggleMinimapBtn");
+  const minimapCloseBtn  = document.getElementById("minimapClose");
+  const mmZoomInBtn      = document.getElementById("minimapZoomIn");
+  const mmZoomOutBtn     = document.getElementById("minimapZoomOut");
+  const mmRotateBtn      = document.getElementById("minimapRotate");
+
+  function openMinimap(){
+    minimapOpen = true;
+    if (minimapPopup) minimapPopup.style.display = "block";
+    clearMinimapHover();
+    drawMinimap();
+  }
+  function closeMinimap(){
+    minimapOpen = false;
+    clearMinimapHover();
+    if (minimapPopup) minimapPopup.style.display = "none";
+  }
+  function toggleMinimap(){
+    if (minimapOpen) closeMinimap();
+    else openMinimap();
+  }
+
+  if (toggleMinimapBtn) toggleMinimapBtn.addEventListener("click", toggleMinimap);
+  if (minimapCloseBtn)  minimapCloseBtn.addEventListener("click", closeMinimap);
+
+  if (mmZoomInBtn) {
+    mmZoomInBtn.addEventListener("click", function(){
+      minimapZoom = Math.min(MINIMAP_ZOOM_MAX, minimapZoom * 1.35);
+      drawMinimap();
+    });
+  }
+  if (mmZoomOutBtn) {
+    mmZoomOutBtn.addEventListener("click", function(){
+      minimapZoom = Math.max(MINIMAP_ZOOM_MIN, minimapZoom / 1.35);
+      drawMinimap();
+    });
+  }
+  if (mmRotateBtn) {
+    mmRotateBtn.addEventListener("click", function(){
+      minimapPlaneIndex = (minimapPlaneIndex + 1) % minimapPlanes.length;
+      clearMinimapHover();
+      drawMinimap();
+    });
+  }
+
+  $(function(){
+    $("#minimapPopup").draggable({
+      handle: "#minimapHeader",
+      containment: "window"
+    });
+  });
+
+  /* ===========================================================
+     ✅ SAVE / LOAD SESSION
+     =========================================================== */
+
+  const saveSessionBtn = document.getElementById("saveSessionBtn");
+  const loadSessionBtn = document.getElementById("loadSessionBtn");
+  const sessionFileInput = document.getElementById("sessionFileInput");
+
+  let pendingLoadedState = null;
+
+const saveCatalogBtn = document.getElementById("saveCatalogBtn");
+
+function buildCurrentCatalogObject(){
+  return {
+    stars: starData || [],
+    planets: planetData || []
+  };
+}
+
+function saveCurrentCatalog(){
+  if (!starData || !starData.length) {
+    console.warn("No catalog loaded to save.");
+    return;
+  }
+
+  const obj = buildCurrentCatalogObject();
+  const ts = new Date().toISOString().replace(/[:.]/g,"-");
+  const base = (lastCatalogLabel || "catalog").replace(/\.json$/i,"").replace(/\.txt$/i,"");
+  const fname = base + "_saved_" + ts + ".json";
+
+  downloadJSON(obj, fname);
+}
+
+//if (saveCatalogBtn) {
+//  saveCatalogBtn.addEventListener("click", saveCurrentCatalog);
+//}
+
+  
+  function buildSaveObject(){
+    const nowISO = new Date().toISOString();
+    const totalSessionMs = getTotalSessionMsSoFar();
+    const sessionStartISO = new Date(sessionStartWallMs).toISOString();
+    const avgLyPerHour = (totalSessionMs > 0) ? totalTravelDistanceLy / (totalSessionMs/3600000) : 0;
+
+    const visited = visitedLog.map(v => ({
+      primaryId: v.primaryId,
+      type: v.type,
+      isStar: !!v.isStar,
+      name: v.name,
+      legLy: v.legLy,
+      starId: v.starId || null
+    }));
+
+    const colonies = colonyLog.map(c => ({
+      primaryId: c.primaryId,
+      type: c.type,
+      name: c.name,
+      starId: c.starId || null
+    }));
+
+    const homeworlds = homeworldLog.map(h => ({
+      primaryId: h.primaryId,
+      type: h.type,
+      name: h.name,
+      starId: h.starId || null
+    }));
+
+const mapUUIDToSave = currentMapUUID || null;
+
+// ✅ warn if map UUID missing
+if (!mapUUIDToSave) {
+  console.warn("Saving session with NULL map UUID. This session will not be loadable.");
+  // optional user-facing warning:
+  alert("Warning: current map has no UUID. Session will save, but cannot be loaded later.");
+}
+
+return {
+  version: 2,
+  uuid: mapUUIDToSave,
+  saveTimeISO: nowISO,
+  sessionStartISO: sessionStartISO,
+  totalSessionMs: totalSessionMs,
+  totalTravelDistanceLy: totalTravelDistanceLy,
+  avgLyPerHour: avgLyPerHour,
+  renames: renamedById,
+  visited,
+  colonies,
+  homeworlds,
+  lastSelectedPrimaryId: currentObjectPrimaryId || null
+};
+
+
+
+
+  }
+
+  function downloadJSON(obj, filename){
+    const json = JSON.stringify(obj, null, 2);
+    const blob = new Blob([json], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function saveSession(){
+    const obj = buildSaveObject();
+    const fname = "mequavis_session_" + (new Date().toISOString().replace(/[:.]/g,"-")) + ".json";
+    downloadJSON(obj, fname);
+  }
+
+
+
+function downloadRawText(text, filename){
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function saveCurrentCatalogRaw(){
+  if (!lastCatalogRawText) {
+    console.warn("No raw catalog cached yet.");
+    return;
+  }
+
+  const ts = new Date().toISOString().replace(/[:.]/g,"-");
+  let base = "catalog";
+
+  if (lastCatalogRawURL && typeof lastCatalogRawURL === "string") {
+    try {
+      base = (lastCatalogRawURL.split("/").pop() || "catalog").replace(/\?.*$/,"");
+      base = base.replace(/\.json$/i,"").replace(/\.txt$/i,"");
+    } catch(e){}
+  }
+
+  const fname = base + "_RAW_" + ts + ".json";
+  downloadRawText(lastCatalogRawText, fname);
+}
+
+if (saveCatalogBtn) {
+  saveCatalogBtn.addEventListener("click", saveCurrentCatalogRaw);
+}
+
+  
+function applyLoadedStateNow(state){
+  if (!state || typeof state !== "object") return;
+
+  var stateUUID =
+    (state.__meq_appendix && state.__meq_appendix.uuid) ||
+    state.mapUUID ||
+    state.uuid ||
+    state.catalogUUID ||
+    (state.meta && (state.meta.uuid || state.meta.mapUUID)) ||
+    null;
+
+  console.log("[MEQ] Session load attempt:");
+  console.log("      currentMapUUID =", currentMapUUID);
+  console.log("      sessionUUID    =", stateUUID);
+
+  // 🔒 RULE 1: map has NO UUID, session HAS UUID -> ABORT
+  if (!currentMapUUID && stateUUID) {
+    console.warn(
+      "[MEQ] ABORT: Map has NO UUID, but session has UUID:", stateUUID
+    );
+    alert(
+      "This session is bound to map UUID:\n" +
+      stateUUID +
+      "\n\nCurrent map has no UUID. Load aborted."
+    );
+    return;
+  }
+
+  // 🔒 RULE 2: map HAS UUID, session has NO UUID -> ABORT
+  if (currentMapUUID && !stateUUID) {
+    console.warn(
+      "[MEQ] ABORT: Map has UUID (" + currentMapUUID + ") but session has NO UUID."
+    );
+    alert("Session file has no map UUID. Load aborted.");
+    return;
+  }
+
+  // 🔒 RULE 3: both have UUID but they DON'T match -> ABORT
+  if (currentMapUUID && stateUUID &&
+      String(stateUUID) !== String(currentMapUUID)) {
+    console.warn(
+      "[MEQ] ABORT: Map/session UUID mismatch. session =",
+      stateUUID, " map =", currentMapUUID
+    );
+    alert(
+      "That session belongs to a different map.\n\n" +
+      "Session UUID: " + stateUUID + "\n" +
+      "Current Map UUID: " + currentMapUUID + "\n\n" +
+      "Load aborted."
+    );
+    return;
+  }
+
+  console.log("[MEQ] UUID check passed; applying session state…");
+
+  // ✅ FROM HERE DOWN: keep your existing logic
+  // (resetSessionState, restoring renames, visited, colonies, homeworlds, etc.)
+
+  resetSessionState("session-load");
+
+  totalSessionMsAccum = Math.max(0, Number(state.totalSessionMs) || 0);
+  sessionStartWallMs = Date.now();
+
+  totalTravelDistanceLy = Number(state.totalTravelDistanceLy) || 0;
+
+  renamedById = state.renames && typeof state.renames === "object" ? state.renames : {};
+  for (var pid in renamedById) {
+    if (renamedById.hasOwnProperty(pid)) {
+      applyRenameToData(pid, renamedById[pid]);
+    }
+  }
+
+  visitedLog = [];
+  visitedById = {};
+  if (Object.prototype.toString.call(state.visited) === "[object Array]") {
+    state.visited.forEach(function(v){
+      if (!v || v.primaryId == null) return;
+      var vpid = String(v.primaryId);
+      visitedById[vpid] = {
+        primaryId: vpid,
+        type: v.type || "OBJECT",
+        isStar: !!v.isStar,
+        name: v.name || ("Object " + vpid),
+        meshRef: resolveMeshByPrimaryId(vpid),
+        legLy: Number(v.legLy) || 0,
+        starId: v.starId || null
+      };
+      visitedLog.push(visitedById[vpid]);
+    });
+  }
+  renderVisitedList();
+
+  colonyLog = [];
+  colonyById = {};
+  if (Object.prototype.toString.call(state.colonies) === "[object Array]") {
+    state.colonies.forEach(function(c){
+      if (!c || c.primaryId == null) return;
+      var cpid = String(c.primaryId);
+      colonyById[cpid] = {
+        primaryId: cpid,
+        type: c.type || "PLANET",
+        name: c.name || ("Colony " + cpid),
+        meshRef: resolveMeshByPrimaryId(cpid),
+        starId: c.starId || null
+      };
+      colonyLog.push(colonyById[cpid]);
+    });
+  }
+  renderColonyList();
+
+  homeworldLog = [];
+  homeworldById = {};
+  if (Object.prototype.toString.call(state.homeworlds) === "[object Array]") {
+    state.homeworlds.forEach(function(h){
+      if (!h || h.primaryId == null) return;
+      var hpid = String(h.primaryId);
+      homeworldById[hpid] = {
+        primaryId: hpid,
+        type: h.type || "PLANET",
+        name: h.name || ("Homeworld " + hpid),
+        meshRef: resolveMeshByPrimaryId(hpid),
+        starId: h.starId || null
+      };
+      homeworldLog.push(homeworldById[hpid]);
+    });
+  }
+  renderHomeworldList();
+
+  updateobjectData();
+  updateCatalogStats();
+  updateNearestStarsList(currentObjectMesh);
+  updateThroneworldDisplay();
+
+  if (state.lastSelectedPrimaryId != null) {
+    travelToPrimaryId(String(state.lastSelectedPrimaryId));
+  }
+}
+
+
+
+
+  function loadSessionFile(file){
+    const reader = new FileReader();
+    reader.onload = function(){
+      try {
+        const state = JSON.parse(reader.result);
+        if (!mapAlive) {
+          pendingLoadedState = state;
+        } else {
+          applyLoadedStateNow(state);
+        }
+      } catch(e){
+        console.error("Bad session file:", e);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  if (saveSessionBtn) saveSessionBtn.addEventListener("click", saveSession);
+
+  if (loadSessionBtn && sessionFileInput) {
+    loadSessionBtn.addEventListener("click", function(){
+      sessionFileInput.value = "";
+      sessionFileInput.click();
+    });
+
+    sessionFileInput.addEventListener("change", function(ev){
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      loadSessionFile(file);
+    });
+  }
+</script>
+
+</body>
+</html>
