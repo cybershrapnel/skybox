@@ -642,6 +642,17 @@
   background: rgba(120,200,255,0.25);
 }
 
+#nearestFilters {
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #bbb;
+}
+#nearestFilters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
 
 
 
