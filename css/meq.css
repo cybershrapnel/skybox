@@ -641,8 +641,15 @@
 .vd-parent-star-btn:hover{
   background: rgba(120,200,255,0.25);
 }
-/* Cap the LEFT accordion column */
 #selector {
   max-height: 90vh;
+  overflow-y: auto;
 }
+$("#selector").accordion({
+  collapsible: true,
+  animate: 100,
+  heightStyle: 'content',  // ⬅ each panel just fits its content
+  active: 4
+});
+
 
