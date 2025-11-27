@@ -644,6 +644,5 @@
 /* Cap the LEFT accordion column */
 #selector {
   max-height: 90vh;
-  overflow-y: auto;   /* scroll the whole accordion if it wants more */
 }
 
