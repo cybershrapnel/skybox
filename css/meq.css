@@ -12,7 +12,7 @@
 
     #catalogStatus {
       font-size: 11px;
-      line-height: 1.3;
+      line-height: 0.5;
       margin-top: 6px;
       color: #cfcfcf;
       word-break: break-word;
@@ -641,15 +641,7 @@
 .vd-parent-star-btn:hover{
   background: rgba(120,200,255,0.25);
 }
-#selector {
-  max-height: 90vh;
-  overflow-y: auto;
-}
-$("#selector").accordion({
-  collapsible: true,
-  animate: 100,
-  heightStyle: 'panel',
-  active: 4
-});
+
+
 
 
