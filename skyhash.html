@@ -2736,6 +2736,24 @@ let lastCatalogRawURL  = null;
       mapAlive = true;
       refreshStarmapList();
 
+      // ✅ NEW: finalize the "Loading catalog..." text after initial load
+      if (catalogStatusEl) {
+        const fromHash = !!getHashCatalogURL();
+        const starsCount   = starData ? starData.length : 0;
+        const planetsCount = planetData ? planetData.length : 0;
+
+        if (fromHash) {
+          // Loaded via # (custom map)
+          catalogStatusEl.style.color = "#8f8";
+          catalogStatusEl.textContent =
+            "Loaded catalog (" + starsCount + " stars, " + planetsCount + " planets). (custom)";
+        } else {
+          // Default server catalog
+          catalogStatusEl.style.color = "#cfcfcf";
+          catalogStatusEl.textContent = "Using server catalog.";
+        }
+      }
+
       updateCatalogStats();
       updateNearestStarsList(currentObjectMesh);
       updateThroneworldDisplay();
@@ -2743,6 +2761,7 @@ let lastCatalogRawURL  = null;
       if (pendingLoadedState) applyLoadedStateNow(pendingLoadedState);
     });
   });
+
 
   window.addEventListener("hashchange", function() {
     var hashURL = getHashCatalogURL();
