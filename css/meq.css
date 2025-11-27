@@ -648,7 +648,7 @@
 $("#selector").accordion({
   collapsible: true,
   animate: 100,
-  heightStyle: 'content',  // ⬅ each panel just fits its content
+  heightStyle: 'panel',
   active: 4
 });
 
