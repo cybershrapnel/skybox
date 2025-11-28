@@ -26,7 +26,15 @@
   <script src="js/PlanetBuilder.js"></script>
   <script src="resources/Detector.js"></script>
 
-  <style></style>
+  <style>
+  /* Make the popups for stars/planets/minimap always on top */
+  #visitDetailsPopup,
+  #minimapPopup {
+    z-index: 999999 !important;  /* really high */
+    position: fixed;             /* or 'absolute' if you prefer */
+  }
+    
+  </style>
 </head>
 
 <body>
