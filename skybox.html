@@ -27,13 +27,49 @@
   <script src="resources/Detector.js"></script>
 
   <style>
-  /* Make the popups for stars/planets/minimap always on top */
-  #visitDetailsPopup,
-  #minimapPopup {
-    z-index: 99999999 !important;  /* really high */
-    position: fixed;             /* or 'absolute' if you prefer */
-  }
-    
+/* === Base stacking order ===================================== */
+
+/* Make the canvas the very bottom layer */
+#webgl_canvas {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  z-index: 0 !important;
+}
+
+/* Side accordion + attribution float above the canvas */
+#selector,
+#attribution-overlay {
+  position: relative;
+  z-index: 10 !important;
+}
+
+/* === Popups: force them to the top and make them solid ======= */
+
+#minimapPopup,
+#visitDetailsPopup {
+  position: fixed !important;      /* keep them attached to viewport */
+  z-index: 999999 !important;      /* very high so nothing beats them */
+  background-color: rgba(0, 0, 0, 0.95) !important; /* kill transparency */
+  border: 1px solid #666;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.9);
+  color: #fff;
+}
+
+/* Make sure the headers aren’t see-through either */
+#minimapHeader,
+#visitDetailsHeader {
+  background-color: rgba(20, 20, 20, 1) !important;
+}
+
+/* Ensure they still accept clicks */
+#minimapPopup,
+#minimapPopup * ,
+#visitDetailsPopup,
+#visitDetailsPopup * {
+  pointer-events: auto !important;
+}
+
   </style>
 </head>
 
