@@ -530,6 +530,10 @@ $(function () {
   const $selector = $("#selector");
   let menuCollapsed = false;
 
+  // 🔍 Detect whether we were loaded with a hash-based catalog URL
+  const hasHashCatalog =
+    (typeof getHashCatalogURL === "function") && !!getHashCatalogURL();
+
   // ✅ helper: move currently active header+panel pair to the top
   function moveActiveSectionToTop() {
     const activeIndex = $selector.accordion("option", "active");
@@ -537,7 +541,7 @@ $(function () {
     // nothing open (collapsible: true & all collapsed)
     if (activeIndex === false || activeIndex == null) return;
 
-    const $headers = $selector.children("h3");
+    const $headers      = $selector.children("h3");
     const $activeHeader = $headers.eq(activeIndex);
     if (!$activeHeader.length) return;
 
@@ -546,6 +550,7 @@ $(function () {
     // already at the top
     if ($activeHeader.is(":first-child")) return;
 
+    // move the open header + panel to the top
     $activeHeader.add($activePanel).prependTo($selector);
 
     // let jQuery UI recalc indices / layout
@@ -559,14 +564,17 @@ $(function () {
     heightStyle: 'panel',
     active: 4,  // your auto-open (Catalog, etc.)
     activate: function (event, ui) {
-      // whenever something is opened via click or .accordion("option","active",...)
+      // Only reorder on *user or programmatic* activate,
+      // not on initial hash-load shortcut below.
       moveActiveSectionToTop();
     }
   });
 
-  // ✅ also handle the initial auto-open (active: 4 on load)
-  // make sure it runs after jQuery UI has finished creating everything
-  setTimeout(moveActiveSectionToTop, 0);
+  // ✅ Initial reorder ONLY when *not* loaded via #catalog
+  if (!hasHashCatalog) {
+    // Normal load: auto-open tab should go to top
+    setTimeout(moveActiveSectionToTop, 0);
+  }
 
   function collapseMenu() {
     const $headers = $selector.children("h3");
@@ -601,12 +609,13 @@ $(function () {
   });
 
   // 🔻 Auto-collapse when opened via a # URL
-  if (typeof getHashCatalogURL === "function" && getHashCatalogURL()) {
+  if (hasHashCatalog) {
     setTimeout(function () {
       $("#collapseMenuBtn").trigger("click");
     }, 0);
   }
 });
+
 
 
 
