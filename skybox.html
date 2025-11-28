@@ -27,28 +27,6 @@
   <script src="resources/Detector.js"></script>
 
   <style>
-/* Put the star/planet + minimap popups above EVERYTHING */
-#visitDetailsPopup,
-#minimapPopup {
-  position: fixed !important;              /* detach from any weird parents */
-  z-index: 999999999999 !important;          /* absurdly high, beats canvases/overlays */
-  opacity: 1 !important;                   /* kill inherited transparency */
-  background: rgba(0, 0, 0, 0.96) !important;  /* solid dark backdrop */
-  color: #fff;
-}
-
-/* Make sure inner elements don’t stay semi-transparent or blended */
-#visitDetailsPopup *,
-#minimapPopup * {
-  opacity: 1 !important;
-  mix-blend-mode: normal !important;
-}
-
-/* Optional, just for nicer header bars & drag target */
-#visitDetailsHeader,
-#minimapHeader {
-  background: #222 !important;
-}
 
 
   </style>
