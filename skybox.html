@@ -27,48 +27,29 @@
   <script src="resources/Detector.js"></script>
 
   <style>
-/* === Base stacking order ===================================== */
-
-/* Make the canvas the very bottom layer */
-#webgl_canvas {
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  z-index: 0 !important;
-}
-
-/* Side accordion + attribution float above the canvas */
-#selector,
-#attribution-overlay {
-  position: relative;
-  z-index: 10 !important;
-}
-
-/* === Popups: force them to the top and make them solid ======= */
-
-#minimapPopup,
-#visitDetailsPopup {
-  position: fixed !important;      /* keep them attached to viewport */
-  z-index: 999999 !important;      /* very high so nothing beats them */
-  background-color: rgba(0, 0, 0, 0.95) !important; /* kill transparency */
-  border: 1px solid #666;
-  box-shadow: 0 0 18px rgba(0, 0, 0, 0.9);
+/* Put the star/planet + minimap popups above EVERYTHING */
+#visitDetailsPopup,
+#minimapPopup {
+  position: fixed !important;              /* detach from any weird parents */
+  z-index: 2147483647 !important;          /* absurdly high, beats canvases/overlays */
+  opacity: 1 !important;                   /* kill inherited transparency */
+  background: rgba(0, 0, 0, 0.96) !important;  /* solid dark backdrop */
   color: #fff;
 }
 
-/* Make sure the headers aren’t see-through either */
-#minimapHeader,
-#visitDetailsHeader {
-  background-color: rgba(20, 20, 20, 1) !important;
+/* Make sure inner elements don’t stay semi-transparent or blended */
+#visitDetailsPopup *,
+#minimapPopup * {
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
 }
 
-/* Ensure they still accept clicks */
-#minimapPopup,
-#minimapPopup * ,
-#visitDetailsPopup,
-#visitDetailsPopup * {
-  pointer-events: auto !important;
+/* Optional, just for nicer header bars & drag target */
+#visitDetailsHeader,
+#minimapHeader {
+  background: #222 !important;
 }
+
 
   </style>
 </head>
