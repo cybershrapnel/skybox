@@ -528,34 +528,45 @@ const hideVisitedNearestEl = document.getElementById("hideVisitedNearest");
 <script>
 $(function () {
   const $selector = $("#selector");
+  let menuCollapsed = false;
 
-  // ✅ Accordion with "move active section to top" behavior
+  // ✅ helper: move currently active header+panel pair to the top
+  function moveActiveSectionToTop() {
+    const activeIndex = $selector.accordion("option", "active");
+
+    // nothing open (collapsible: true & all collapsed)
+    if (activeIndex === false || activeIndex == null) return;
+
+    const $headers = $selector.children("h3");
+    const $activeHeader = $headers.eq(activeIndex);
+    if (!$activeHeader.length) return;
+
+    const $activePanel = $activeHeader.next(".overlay-panel");
+
+    // already at the top
+    if ($activeHeader.is(":first-child")) return;
+
+    $activeHeader.add($activePanel).prependTo($selector);
+
+    // let jQuery UI recalc indices / layout
+    $selector.accordion("refresh");
+  }
+
+  // ✅ init accordion
   $selector.accordion({
     collapsible: true,
     animate: 100,
     heightStyle: 'panel',
-    active: 4,
+    active: 4,  // your auto-open (Catalog, etc.)
     activate: function (event, ui) {
-      const $newHeader = ui.newHeader;
-
-      // If everything collapsed (no open panel), do nothing
-      if (!$newHeader.length) return;
-
-      // Its corresponding panel is always the next sibling
-      const $newPanel = $newHeader.next(".overlay-panel");
-
-      // Already at the top? Nothing to do.
-      if ($newHeader.is(":first-child")) return;
-
-      // ✅ Move the open header + panel pair to the top of #selector
-      $newHeader.add($newPanel).prependTo($selector);
-
-      // Let jQuery UI recalc indices, heights, etc.
-      $selector.accordion("refresh");
+      // whenever something is opened via click or .accordion("option","active",...)
+      moveActiveSectionToTop();
     }
   });
 
-  let menuCollapsed = false;
+  // ✅ also handle the initial auto-open (active: 4 on load)
+  // make sure it runs after jQuery UI has finished creating everything
+  setTimeout(moveActiveSectionToTop, 0);
 
   function collapseMenu() {
     const $headers = $selector.children("h3");
@@ -579,13 +590,12 @@ $(function () {
     $selector.accordion("refresh");
   }
 
-  // Collapse button
   $("#collapseMenuBtn").on("click", function(e){
     e.preventDefault();
     if (!menuCollapsed) collapseMenu();
   });
 
-  // ✅ Any header can restore the menu (important now that we reorder)
+  // ✅ any visible header can restore the collapsed menu
   $selector.on("click", "h3", function () {
     if (menuCollapsed) restoreMenu();
   });
@@ -597,6 +607,7 @@ $(function () {
     }, 0);
   }
 });
+
 
 
   var distanceHeader = $("#distance-header");
